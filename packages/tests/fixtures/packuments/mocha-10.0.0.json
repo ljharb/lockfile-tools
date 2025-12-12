@@ -1,0 +1,8 @@
+{
+	"name": "mocha",
+	"version": "10.0.0",
+	"bin": {
+		"mocha": "bin/mocha.js",
+		"_mocha": "bin/_mocha"
+	}
+}

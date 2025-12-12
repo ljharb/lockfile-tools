@@ -1,0 +1,7 @@
+{
+	"name": "gulp-cli",
+	"version": "2.3.0",
+	"bin": {
+		"gulp": "bin/gulp.js"
+	}
+}

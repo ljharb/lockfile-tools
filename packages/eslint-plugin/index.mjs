@@ -1,3 +1,4 @@
+import binaryConflicts from './rules/binary-conflicts.mjs';
 import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
@@ -18,6 +19,7 @@ const LOCKFILE_GLOBS = ALL_LOCKFILES.map((name) => `**/${name}`);
 
 /** @type {Record<string, import('eslint').Rule.RuleModule>} */
 const rules = {
+	'binary-conflicts': binaryConflicts,
 	flavor,
 	integrity,
 	'non-registry-specifiers': nonRegistrySpecifiers,
@@ -28,6 +30,7 @@ const rules = {
 /** @type {{ rules: Record<string, import('eslint').Linter.RuleEntry> }} */
 const recommendedRules = {
 	rules: {
+		'lockfile/binary-conflicts': 'error',
 		'lockfile/flavor': ['error', 'npm'],
 		'lockfile/integrity': 'error',
 		'lockfile/non-registry-specifiers': 'error',

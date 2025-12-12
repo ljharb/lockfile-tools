@@ -1,0 +1,7 @@
+{
+	"name": "tape",
+	"version": "5.7.5",
+	"bin": {
+		"tape": "bin/tape"
+	}
+}
