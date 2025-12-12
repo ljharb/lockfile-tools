@@ -1,5 +1,5 @@
 import test from 'tape';
-import { extractPackageName } from 'lockfile-tools/lib/lockfile-utils.mjs';
+import { extractPackageName } from 'lockfile-tools/npm';
 
 test('extractPackageName - handles plain package name without node_modules', (t) => {
 	const result = extractPackageName('lodash');

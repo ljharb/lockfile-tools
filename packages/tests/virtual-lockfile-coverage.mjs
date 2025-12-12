@@ -53,7 +53,7 @@ test('buildVirtualLockfile - successful arborist load', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/lib/virtual-lockfile.mjs', {}, {
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
 		'@npmcli/arborist': MockArborist,
 	});
 
@@ -94,7 +94,7 @@ test('buildVirtualLockfile - arborist failure', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/lib/virtual-lockfile.mjs', {}, {
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
 		'@npmcli/arborist': MockArborist,
 	});
 
@@ -133,7 +133,7 @@ test('buildVirtualLockfile - tree without edgesOut', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/lib/virtual-lockfile.mjs', {}, {
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
 		'@npmcli/arborist': MockArborist,
 	});
 
