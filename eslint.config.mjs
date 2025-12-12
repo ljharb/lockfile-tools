@@ -7,6 +7,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 			'array-bracket-newline': 'off',
 			'func-style': 'off',
 			'id-length': 'off',
+			'max-len': 'off',
 			'max-lines-per-function': 'off',
 			'multiline-comment-style': 'off',
 			'no-extra-parens': 'off',
@@ -17,6 +18,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 	{
 		files: ['packages/eslint-plugin/**'],
 		rules: {
+			eqeqeq: ['error', 'allow-null'],
 			'max-depth': 'off',
 			'max-lines': 'off',
 			'max-nested-callbacks': 'warn',
