@@ -1,5 +1,5 @@
 import test from 'tape';
-import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/lib/registry-utils.mjs';
+import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/registry';
 
 test('normalizeRegistry', (t) => {
 	t.equal(normalizeRegistry('https://registry.npmjs.org/'), 'https://registry.npmjs.org', 'removes trailing slash');

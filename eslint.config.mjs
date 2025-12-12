@@ -9,6 +9,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 			'id-length': 'off',
 			'max-len': 'off',
 			'max-lines-per-function': 'off',
+			'max-lines': 'off',
 			'multiline-comment-style': 'off',
 			'no-extra-parens': 'off',
 			'prefer-named-capture-group': 'off', // due to https://github.com/microsoft/TypeScript/issues/32098
