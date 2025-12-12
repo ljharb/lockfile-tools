@@ -1,5 +1,6 @@
 import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
+import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
 import versionRule from './rules/version.mjs';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
@@ -19,6 +20,7 @@ const LOCKFILE_GLOBS = ALL_LOCKFILES.map((name) => `**/${name}`);
 const rules = {
 	flavor,
 	integrity,
+	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
 	version: versionRule,
 };
@@ -28,6 +30,7 @@ const recommendedRules = {
 	rules: {
 		'lockfile/flavor': ['error', 'npm'],
 		'lockfile/integrity': 'error',
+		'lockfile/non-registry-specifiers': 'error',
 		'lockfile/registry': 'error',
 		'lockfile/version': 'error',
 	},

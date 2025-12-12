@@ -33,6 +33,7 @@
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
+		"@eslint/core": "^1.0.0",
 		"@ljharb/tsconfig": "^0.3.2",
 		"auto-changelog": "^2.5.0",
 		"npmignore": "^0.3.4",
