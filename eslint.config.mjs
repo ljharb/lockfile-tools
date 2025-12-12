@@ -10,6 +10,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 			'max-len': 'off',
 			'max-lines-per-function': 'off',
 			'max-lines': 'off',
+			'max-statements': 'off',
 			'multiline-comment-style': 'off',
 			'no-extra-parens': 'off',
 			'prefer-named-capture-group': 'off', // due to https://github.com/microsoft/TypeScript/issues/32098
@@ -21,9 +22,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 		rules: {
 			eqeqeq: ['error', 'allow-null'],
 			'max-depth': 'off',
-			'max-lines': 'off',
 			'max-nested-callbacks': 'warn',
-			'max-statements': 'off',
 			'no-magic-numbers': 'off',
 			'no-negated-condition': 'warn',
 		},

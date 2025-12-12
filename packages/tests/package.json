@@ -15,6 +15,7 @@
 		"eslint": "^9.39.2",
 		"eslint-plugin-lockfile": "0.0.0",
 		"esmock": "^2.7.3",
+		"lintlock": "0.0.0",
 		"lockfile-tools": "0.0.0",
 		"nyc": "^17.1.0",
 		"tape": "^5.9.0",

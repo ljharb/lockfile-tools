@@ -1,0 +1,21 @@
+Lint npm ecosystem lockfiles for security and consistency issues.
+
+Usage: lintlock [options] [lockfile-path]
+
+If no lockfile path is provided, searches the current directory for lockfiles.
+
+Options:
+  -f, --flavor <pm>       Allowed package manager(s): npm, yarn, pnpm, bun, vlt
+                          Can be specified multiple times. Defaults to auto-detect.
+  -r, --registry <url>    Allowed registry URL(s)
+                          Can be specified multiple times. Defaults to npm config.
+  -a, --algorithms <alg>  Allowed integrity hash algorithm(s): sha1, sha256, sha384, sha512
+                          Can be specified multiple times. Defaults to all.
+      --help              Show this help message
+
+Examples:
+  lintlock
+  lintlock package-lock.json
+  lintlock -f npm -f yarn
+  lintlock -r https://registry.npmjs.org/
+  lintlock -a sha512 -a sha384
