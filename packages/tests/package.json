@@ -1,0 +1,24 @@
+{
+	"private": true,
+	"name": "eslint-plugin-lockfile-tests",
+	"version": "0.0.0",
+	"description": "Tests for eslint-plugin-lockfile",
+	"scripts": {
+		"tests-only": "NYC_CWD=../.. NODE_OPTIONS='--import ./coverage-loader.mjs' nyc --hook-require=false tape './*.mjs' './**/*.mjs'",
+		"test": "npm run tests-only"
+	},
+	"devDependencies": {
+		"@arethetypeswrong/cli": "^0.18.2",
+		"@istanbuljs/esm-loader-hook": "^0.3.0",
+		"@ljharb/tsconfig": "^0.3.2",
+		"@types/tape": "^5.8.1",
+		"eslint": "^9.39.2",
+		"eslint-plugin-lockfile": "0.0.0",
+		"lockfile-tools": "0.0.0",
+		"tape": "^5.9.0",
+		"typescript": "next"
+	},
+	"engines": {
+		"node": "^22.21.1 || ^24.12 || >= 25.2.1"
+	}
+}

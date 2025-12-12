@@ -1,0 +1,39 @@
+{
+	"private": true,
+	"name": "lockfile-tools-monorepo",
+	"version": "0.0.0",
+	"workspaces": [
+		"packages/*"
+	],
+	"description": "Monorepo for tools to validate and secure your npm ecosystem lockfiles",
+	"scripts": {
+		"lint": "eslint --ext=js,mjs .",
+		"postlint": "tsc",
+		"pretest": "npm run lint",
+		"tests-only": "npm run --if-present tests-only --workspaces",
+		"test": "npm run tests-only",
+		"posttest": "npx npm@\">= 10.2\" audit --production"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ljharb/lockfile-tools.git"
+	},
+	"author": "Jordan Harband <ljharb@gmail.com>",
+	"license": "MIT",
+	"devDependencies": {
+		"@ljharb/eslint-config": "^22.1.3",
+		"@ljharb/tsconfig": "^0.3.2",
+		"@types/node": "^22.19.2",
+		"eslint": "^9.39.2",
+		"typescript": "next"
+	},
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": "^22.21 || ^24.11 || >= 25.2"
+		},
+		"packageManager": {
+			"name": "npm"
+		}
+	}
+}
