@@ -10,7 +10,7 @@ import { readFileSync, existsSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent } from 'lockfile-tools/io';
+import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 
@@ -49,6 +49,7 @@ function extractPackagesFromNpmLockfile(content) {
 				name: key,
 				integrity: pkg.integrity || null,
 				resolved: pkg.resolved || null,
+				line: findJsonKeyLine(content, key),
 			};
 		});
 	}
@@ -60,6 +61,7 @@ function extractPackagesFromNpmLockfile(content) {
 				name: fullName,
 				integrity: dep.integrity || null,
 				resolved: dep.resolved || null,
+				line: findJsonKeyLine(content, fullName),
 			};
 		});
 	}
@@ -76,10 +78,12 @@ function extractPackagesFromYarnLockfile(content) {
 			name,
 			resolved,
 			integrity,
+			line,
 		}) => ({
 			name,
 			resolved,
 			integrity,
+			line,
 		}));
 }
 
@@ -92,10 +96,12 @@ function extractPackagesFromPnpmLockfile(content) {
 			name,
 			resolved,
 			integrity,
+			line,
 		}) => ({
 			name,
 			resolved,
 			integrity,
+			line,
 		}));
 }
 
@@ -118,6 +124,7 @@ function extractPackagesFromBunLockfile(content) {
 					name: key,
 					integrity: integrity || null,
 					resolved: /** @type {RegistryURL} */ (`https://registry.npmjs.org/${pkgName}/-/${pkgName}-${version}.tgz`),
+					line: findJsonKeyLine(content, key),
 				};
 			}
 		});
@@ -159,6 +166,7 @@ function extractPackagesFromVltLockfile(content) {
 					resolved: version
 						? /** @type {RegistryURL} */ (`https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`)
 						: null,
+					line: findJsonKeyLine(content, key),
 				};
 			}
 		});
@@ -394,11 +402,16 @@ export default {
 				integrity,
 				name,
 				resolved,
+				line,
 			} = pkg;
+
+			/** @type {import('eslint').AST.SourceLocation | undefined} */
+			const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 			if (!integrity) {
 				context.report({
 					node,
+					loc,
 					messageId: 'missingIntegrity',
 					data: { name, filename },
 				});
@@ -410,6 +423,7 @@ export default {
 			if (!formatMatch) {
 				context.report({
 					node,
+					loc,
 					messageId: 'invalidIntegrity',
 					data: { name, filename },
 				});
@@ -422,6 +436,7 @@ export default {
 			if (!allowedAlgorithms.includes(algorithm)) {
 				context.report({
 					node,
+					loc,
 					messageId: 'disallowedAlgorithm',
 					data: {
 						name,
@@ -440,6 +455,7 @@ export default {
 				// Download failed - report the actual error
 				context.report({
 					node,
+					loc,
 					messageId: 'downloadFailed',
 					data: {
 						name,
@@ -456,6 +472,7 @@ export default {
 			if (!result.valid) {
 				context.report({
 					node,
+					loc,
 					messageId: 'incorrectIntegrity',
 					data: {
 						name,
@@ -501,15 +518,19 @@ export default {
 
 			// Report errors for packages without resolved URL (missing both resolved and integrity)
 			for (const pkg of unresolvedPackages) {
+				/** @type {import('eslint').AST.SourceLocation | undefined} */
+				const loc = pkg.line ? { start: { line: pkg.line, column: 0 }, end: { line: pkg.line, column: 0 } } : undefined;
 				if (!pkg.integrity) {
 					context.report({
 						node,
+						loc,
 						messageId: 'missingIntegrity',
 						data: { name: pkg.name, filename },
 					});
 				}
 				context.report({
 					node,
+					loc,
 					messageId: 'missingResolved',
 					data: { name: pkg.name, filename },
 				});

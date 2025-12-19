@@ -12,7 +12,7 @@ The rule also warns on non-HTTPS registry URLs as they are insecure.
 
 import { dirname, join } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent } from 'lockfile-tools/io';
+import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { extractRegistryFromUrl } from 'lockfile-tools/registry';
@@ -29,7 +29,7 @@ const { values } = Object;
  * @property {string} explanation - Justification for allowing this non-registry dependency
  */
 
-/** @typedef {{ name: string, resolved: string | null }} DependencyInfo */
+/** @typedef {{ name: string, resolved: string | null, line: number }} DependencyInfo */
 
 /** @type {(url: string) => boolean} */
 function isRegistryUrl(url) {
@@ -101,6 +101,7 @@ function extractDepsFromNpmLockfile(content) {
 				deps.push({
 					name: key,
 					resolved: pkg.resolved,
+					line: findJsonKeyLine(content, key),
 				});
 			}
 		});
@@ -112,6 +113,7 @@ function extractDepsFromNpmLockfile(content) {
 				deps.push({
 					name,
 					resolved: dep.resolved,
+					line: findJsonKeyLine(content, name),
 				});
 			}
 		});
@@ -123,18 +125,24 @@ function extractDepsFromNpmLockfile(content) {
 /** @type {(content: string) => DependencyInfo[]} */
 function extractDepsFromYarnLockfile(content) {
 	const entries = parseYarnLockfile(content, ['resolved']);
-	return entries.map(({ name, resolved }) => ({
+	return entries.map(({
+		name, resolved, line,
+	}) => ({
 		name,
 		resolved,
+		line,
 	}));
 }
 
 /** @type {(content: string) => DependencyInfo[]} */
 function extractDepsFromPnpmLockfile(content) {
 	const entries = parsePnpmLockfile(content, ['tarball']);
-	return entries.map(({ name, resolved }) => ({
+	return entries.map(({
+		name, resolved, line,
+	}) => ({
 		name,
 		resolved,
+		line,
 	}));
 }
 
@@ -312,12 +320,17 @@ export default {
 						return;
 					}
 
-					deps.forEach(({ name, resolved }) => {
+					deps.forEach(({
+						name, resolved, line,
+					}) => {
 						/* istanbul ignore start - defensive: packages without resolved URLs are filtered earlier */
 						if (!resolved) {
 							return;
 						}
 						/* istanbul ignore stop */
+
+						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 						// Check if this dependency is in the ignore list; entry is inferred from ignore array
 						// @ts-expect-error - TS7006
@@ -327,6 +340,7 @@ export default {
 							// HTTP registries are always reported, even if ignored for non-registry
 							context.report({
 								node,
+								loc,
 								messageId: 'nonHttpsRegistry',
 								data: {
 									name,
@@ -347,6 +361,7 @@ export default {
 							const type = getNonRegistryType(resolved);
 							context.report({
 								node,
+								loc,
 								messageId: 'nonRegistrySpecifier',
 								data: {
 									name,

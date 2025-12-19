@@ -6,6 +6,7 @@ export type PackageInfo = {
   name: string;
   integrity: string | null;
   resolved: string | null;
+  line: number;
 };
 
 /**

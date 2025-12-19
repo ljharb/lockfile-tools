@@ -31,3 +31,24 @@ export function loadBunLockbContent(filepath) {
 export function getLockfileName(filepath) {
 	return /** @type {Lockfile} */ (basename(filepath));
 }
+
+/**
+ * Finds the line number of a JSON key in content
+ * @param {string} content - The file content
+ * @param {string} key - The key to find (e.g., "node_modules/tape")
+ * @returns {number} - Line number (1-indexed), or 0 if not found
+ */
+export function findJsonKeyLine(content, key) {
+	const lines = content.split('\n');
+	// Escape special regex characters in the key
+	const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	// Match the key as a JSON property (with quotes)
+	const pattern = new RegExp(`^\\s*"${escapedKey}"\\s*:`);
+
+	for (let i = 0; i < lines.length; i++) {
+		if (pattern.test(lines[i])) {
+			return i + 1; // 1-indexed
+		}
+	}
+	return 0; // Not found
+}

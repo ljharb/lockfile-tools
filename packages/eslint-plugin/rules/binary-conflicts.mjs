@@ -16,7 +16,7 @@ import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent } from 'lockfile-tools/io';
+import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
@@ -31,6 +31,7 @@ const { values, entries } = Object;
  * @property {string} version - Package version
  * @property {Record<string, string>} bins - Binary name -> script path mapping
  * @property {boolean} isDirect - Whether this is a direct dependency
+ * @property {number} line - Line number in lockfile where package appears
  */
 
 /**
@@ -115,6 +116,7 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 					version: pkg.version || 'unknown',
 					bins,
 					isDirect: directDeps.has(packageName),
+					line: findJsonKeyLine(content, key),
 				};
 			}
 			return null;
@@ -141,6 +143,7 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 						bins,
 						/* istanbul ignore next - defensive: packageName is always extracted from fullName */
 						isDirect: directDeps.has(packageName || ''),
+						line: findJsonKeyLine(content, name),
 					};
 				}
 				return null;
@@ -173,7 +176,11 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 	const directDeps = getDirectDependencies(dir);
 	const parsedEntries = parseYarnLockfile(content, ['version']);
 
-	const packageList = parsedEntries.map(({ name, otherFields }) => {
+	const packageList = parsedEntries.map(({
+		name,
+		otherFields,
+		line,
+	}) => {
 		const nameMatch = name.match(/^(@?[^@]+)/);
 		/* istanbul ignore next - defensive: yarn package names always match this pattern */
 		const pkgName = nameMatch ? nameMatch[1] : name;
@@ -181,11 +188,16 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 			name: pkgName,
 			/* istanbul ignore next - defensive: git packages may not have version field in yarn lockfiles */
 			version: (otherFields && otherFields.version) || 'unknown',
+			line,
 		};
 	});
 
 	// Fetch all package bins
-	const binPromises = packageList.map(async ({ name, version }) => {
+	const binPromises = packageList.map(async ({
+		name,
+		version,
+		line,
+	}) => {
 		const bins = await fetchPackageBins(name, version);
 		if (bins) {
 			return {
@@ -193,6 +205,7 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 				version,
 				bins,
 				isDirect: directDeps.has(name),
+				line,
 			};
 		}
 		/* istanbul ignore start - defensive: packages without bins are filtered earlier */
@@ -212,10 +225,12 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 	const directDeps = getDirectDependencies(dir);
 
 	let inPackages = false;
-	/** @type {{key: string, name: string, version: string}[]} */
+	/** @type {{key: string, name: string, version: string, line: number}[]} */
 	const packageList = [];
 	/** @type {string | null} */
 	let currentPackage = null;
+	/** @type {number} */
+	let currentPackageLine = 0;
 
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
@@ -234,9 +249,11 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 						name: pkgName,
 						/* istanbul ignore next - defensive: pnpm packages always have version in key */
 						version: versionMatch ? versionMatch[1] : 'unknown',
+						line: currentPackageLine,
 					});
 				}
 				currentPackage = line.split(':')[0].trim().replace(/['"]/g, '');
+				currentPackageLine = i + 1; // 1-indexed
 			}
 		}
 	}
@@ -251,6 +268,7 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 			name: pkgName,
 			/* istanbul ignore next - defensive: pnpm packages always have version in key */
 			version: versionMatch ? versionMatch[1] : 'unknown',
+			line: currentPackageLine,
 		});
 	}
 
@@ -259,6 +277,7 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 		key,
 		name,
 		version,
+		line,
 	}) => {
 		const bins = await fetchPackageBins(name, version);
 		if (bins) {
@@ -267,6 +286,7 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 				version,
 				bins,
 				isDirect: directDeps.has(name),
+				line,
 			};
 		}
 		return null;
@@ -316,6 +336,7 @@ async function extractPackageBinsFromVltLockfile(content, dir) {
 						version: String(version),
 						bins,
 						isDirect: directDeps.has(name),
+						line: findJsonKeyLine(content, key),
 					};
 				}
 			}
@@ -369,6 +390,7 @@ async function extractPackageBinsFromVirtual(virtualPackages) {
 				version,
 				bins,
 				isDirect,
+				line: 0, // Virtual lockfile has no file, so no line number
 			};
 		}
 		return null;
@@ -434,6 +456,10 @@ export default {
 						if (providers.length > 1) {
 							// Check if there's a clear preference (direct dependency)
 							const directProviders = providers.filter((p) => p.isDirect);
+							// Use the first provider's line number for the error location (0 for virtual)
+							const firstLine = providers[0].line;
+							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							const loc = firstLine ? { start: { line: firstLine, column: 0 }, end: { line: firstLine, column: 0 } } : undefined;
 
 							if (directProviders.length === 1) {
 								// One direct dependency provides it
@@ -445,6 +471,7 @@ export default {
 
 								context.report({
 									node,
+									loc,
 									messageId: 'binaryConflictWithPreference',
 									data: {
 										binary: binName,
@@ -462,6 +489,7 @@ export default {
 
 								context.report({
 									node,
+									loc,
 									messageId: 'binaryConflict',
 									data: {
 										binary: binName,
@@ -517,6 +545,10 @@ export default {
 						if (providers.length > 1) {
 							// Check if there's a clear preference (direct dependency)
 							const directProviders = providers.filter((p) => p.isDirect);
+							// Use the first provider's line number for the error location
+							const firstLine = providers[0].line;
+							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							const loc = firstLine ? { start: { line: firstLine, column: 0 }, end: { line: firstLine, column: 0 } } : undefined;
 
 							if (directProviders.length === 1) {
 								// One direct dependency provides it
@@ -528,6 +560,7 @@ export default {
 
 								context.report({
 									node,
+									loc,
 									messageId: 'binaryConflictWithPreference',
 									data: {
 										binary: binName,
@@ -545,6 +578,7 @@ export default {
 
 								context.report({
 									node,
+									loc,
 									messageId: 'binaryConflict',
 									data: {
 										binary: binName,

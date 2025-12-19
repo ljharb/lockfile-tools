@@ -312,3 +312,46 @@ test('CLI - lint lockfile with warning-level issues (line 178)', async (t) => {
 	t.end();
 });
 
+test('CLI - integrity rule reports correct line numbers', async (t) => {
+	const tempDir = join(__dirname, 'temp-cli-test-line-numbers');
+	mkdirSync(tempDir, { recursive: true });
+
+	// Create a valid lockfile with correct integrity but we'll use registry rule to test line numbers
+	// The integrity rule will see this as valid, but registry rule (object config) tests line numbers
+	// "node_modules/tape" appears on line 11
+	const lockfileContent = `{
+  "name": "test-package",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "packages": {
+    "": {
+      "dependencies": {
+        "tape": "^5.0.0"
+      }
+    },
+    "node_modules/tape": {
+      "version": "5.7.5",
+      "resolved": "https://registry.npmjs.org/tape/-/tape-5.7.5.tgz"
+    }
+  }
+}`;
+	writeFileSync(join(tempDir, 'package-lock.json'), lockfileContent);
+	writeFileSync(join(tempDir, 'package.json'), JSON.stringify({
+		name: 'test-package',
+		version: '1.0.0',
+		dependencies: { tape: '^5.0.0' },
+	}));
+
+	try {
+		const result = await runCli([join(tempDir, 'package-lock.json')]);
+
+		// There will be an integrity error for missing integrity hash
+		t.equal(result.exitCode, 1, 'exits with code 1 for missing integrity');
+		// The integrity rule reports at line 11 where "node_modules/tape" appears
+		t.ok(result.stdout.includes('11:1'), 'integrity error shows correct line number (11)');
+	} finally {
+		rmSync(tempDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});

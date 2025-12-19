@@ -10,7 +10,7 @@ import { dirname, join } from 'path';
 import { execSync } from 'child_process';
 import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, getLockfileName } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, getLockfileName, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies, extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile } from 'lockfile-tools/parsers';
 import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/registry';
@@ -22,7 +22,7 @@ const { values } = Object;
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
 /** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
-/** @typedef {{ name: string, registry: RegistryURL }} PackageRegistry */
+/** @typedef {{ name: string, registry: RegistryURL, line: number }} PackageRegistry */
 
 function getDefaultRegistry() {
 	try {
@@ -33,16 +33,18 @@ function getDefaultRegistry() {
 	}
 }
 
-/** @type {(content: string) => RegistryURL[]} */
+/** @typedef {{ registry: RegistryURL, line: number }} RegistryWithLine */
+
+/** @type {(content: string) => RegistryWithLine[]} */
 function extractRegistriesFromNpmLockfile(content) {
-	/** @type {Set<RegistryURL>} */
-	const registries = new Set();
+	/** @type {Map<RegistryURL, number>} */
+	const registries = new Map();
 
 	const parsed = JSON.parse(content);
 
 	// Check packages
 	if (parsed.packages) {
-		Object.entries(parsed.packages).forEach(([, pkg]) => {
+		Object.entries(parsed.packages).forEach(([key, pkg]) => {
 			// Skip workspace symlinks (link: true means it's a local workspace package)
 			if (pkg.link) {
 				return;
@@ -50,7 +52,10 @@ function extractRegistriesFromNpmLockfile(content) {
 			if (pkg.resolved && typeof pkg.resolved === 'string') {
 				const registry = extractRegistryFromUrl(pkg.resolved);
 				if (registry) {
-					registries.add(normalizeRegistry(registry));
+					const normalized = normalizeRegistry(registry);
+					if (!registries.has(normalized)) {
+						registries.set(normalized, findJsonKeyLine(content, key));
+					}
 				}
 			}
 		});
@@ -58,56 +63,65 @@ function extractRegistriesFromNpmLockfile(content) {
 
 	// Check dependencies (lockfile v1)
 	if (parsed.dependencies) {
-		traverseDependencies(parsed.dependencies, (_name, dep) => {
+		traverseDependencies(parsed.dependencies, (name, dep) => {
 			if (dep.resolved && typeof dep.resolved === 'string') {
 				const registry = extractRegistryFromUrl(dep.resolved);
 				if (registry) {
-					registries.add(normalizeRegistry(registry));
+					const normalized = normalizeRegistry(registry);
+					if (!registries.has(normalized)) {
+						registries.set(normalized, findJsonKeyLine(content, name));
+					}
 				}
 			}
 		});
 	}
 
-	return from(registries);
+	return from(registries.entries()).map(([registry, line]) => ({ registry, line }));
 }
 
-/** @type {(content: string) => RegistryURL[]} */
+/** @type {(content: string) => RegistryWithLine[]} */
 function extractRegistriesFromYarnLockfile(content) {
-	/** @type {Set<RegistryURL>} */
-	const registries = new Set();
+	/** @type {Map<RegistryURL, number>} */
+	const registries = new Map();
 
 	const entries = parseYarnLockfile(content, ['resolved']);
-	entries.forEach(({ resolved }) => {
+	entries.forEach(({ resolved, line }) => {
 		if (resolved) {
 			const registry = extractRegistryFromUrl(resolved);
 			if (registry) {
-				registries.add(normalizeRegistry(registry));
+				const normalized = normalizeRegistry(registry);
+				if (!registries.has(normalized)) {
+					registries.set(normalized, line);
+				}
 			}
 		}
 	});
 
-	return from(registries);
+	return from(registries.entries()).map(([registry, line]) => ({ registry, line }));
 }
 
-/** @type {(content: string) => RegistryURL[]} */
+/** @type {(content: string) => RegistryWithLine[]} */
 function extractRegistriesFromPnpmLockfile(content) {
-	/** @type {Set<RegistryURL>} */
-	const registries = new Set();
+	/** @type {Map<RegistryURL, number>} */
+	const registries = new Map();
 
 	const entries = parsePnpmLockfile(content, ['tarball']);
-	entries.forEach(({ resolved }) => {
+	entries.forEach(({ resolved, line }) => {
 		if (resolved) {
 			const registry = extractRegistryFromUrl(resolved);
 			if (registry) {
-				registries.add(normalizeRegistry(registry));
+				const normalized = normalizeRegistry(registry);
+				if (!registries.has(normalized)) {
+					registries.set(normalized, line);
+				}
 			}
 		}
 	});
 
-	return from(registries);
+	return from(registries.entries()).map(([registry, line]) => ({ registry, line }));
 }
 
-/** @type {(_content: string) => RegistryURL[]} */
+/** @type {(_content: string) => RegistryWithLine[]} */
 // eslint-disable-next-line no-unused-vars
 function extractRegistriesFromBunLockfile(_content) {
 	/*
@@ -118,7 +132,7 @@ function extractRegistriesFromBunLockfile(_content) {
 	return [];
 }
 
-/** @type {(filepath: string) => RegistryURL[]} */
+/** @type {(filepath: string) => RegistryWithLine[]} */
 function extractRegistriesFromBunLockbBinary(filepath) {
 	const yarnLockContent = loadBunLockbContent(filepath);
 	if (!yarnLockContent) {
@@ -127,7 +141,7 @@ function extractRegistriesFromBunLockbBinary(filepath) {
 	return extractRegistriesFromYarnLockfile(yarnLockContent);
 }
 
-/** @type {(content: string) => RegistryURL[]} */
+/** @type {(content: string) => RegistryWithLine[]} */
 function extractRegistriesFromVltLockfile(content) {
 	/*
 	 * vlt lockfiles don't store registry URLs, they use nodes format
@@ -139,7 +153,7 @@ function extractRegistriesFromVltLockfile(content) {
 	return [];
 }
 
-/** @type {{ [k in Lockfile]: (s: string) => RegistryURL[] }} */
+/** @type {{ [k in Lockfile]: (s: string) => RegistryWithLine[] }} */
 const extracts = {
 	// @ts-expect-error TS doesn't understand dunder proto
 	__proto__: null,
@@ -152,7 +166,7 @@ const extracts = {
 	'vlt-lock.json': extractRegistriesFromVltLockfile,
 };
 
-/** @type {(filepath: string) => RegistryURL[]} */
+/** @type {(filepath: string) => RegistryWithLine[]} */
 function extractRegistriesFromLockfile(filepath) {
 	const filename = getLockfileName(filepath);
 
@@ -195,6 +209,7 @@ function extractPackageRegistriesFromNpmLockfile(content) {
 					packages.push({
 						name: extractPackageName(key),
 						registry: normalizeRegistry(registry),
+						line: findJsonKeyLine(content, key),
 					});
 				}
 			}
@@ -209,6 +224,7 @@ function extractPackageRegistriesFromNpmLockfile(content) {
 					packages.push({
 						name: extractPackageName(name),
 						registry: normalizeRegistry(registry),
+						line: findJsonKeyLine(content, name),
 					});
 				}
 			}
@@ -224,7 +240,9 @@ function extractPackageRegistriesFromYarnLockfile(content) {
 	const packages = [];
 
 	const entries = parseYarnLockfile(content, ['resolved']);
-	entries.forEach(({ name, resolved }) => {
+	entries.forEach(({
+		name, resolved, line,
+	}) => {
 		if (resolved) {
 			const registry = extractRegistryFromUrl(resolved);
 			if (registry) {
@@ -234,6 +252,7 @@ function extractPackageRegistriesFromYarnLockfile(content) {
 				packages.push({
 					name: pkgName,
 					registry: normalizeRegistry(registry),
+					line,
 				});
 			}
 		}
@@ -248,7 +267,9 @@ function extractPackageRegistriesFromPnpmLockfile(content) {
 	const packages = [];
 
 	const entries = parsePnpmLockfile(content, ['tarball']);
-	entries.forEach(({ name, resolved }) => {
+	entries.forEach(({
+		name, resolved, line,
+	}) => {
 		if (resolved) {
 			const registry = extractRegistryFromUrl(resolved);
 			if (registry) {
@@ -259,6 +280,7 @@ function extractPackageRegistriesFromPnpmLockfile(content) {
 				packages.push({
 					name: pkgName,
 					registry: normalizeRegistry(registry),
+					line,
 				});
 			}
 		}
@@ -420,6 +442,7 @@ export default {
 								return {
 									name,
 									registry: /** @type {RegistryURL} */ (registry),
+									line: 0, // Virtual lockfile has no file, so no line number
 								};
 							})
 							.filter((pkg) => pkg.registry);
@@ -507,7 +530,9 @@ export default {
 							return;
 						}
 
-						packages.forEach(({ name, registry }) => {
+						packages.forEach(({
+							name, registry, line,
+						}) => {
 							// Find which registries match this package
 							/** @type {RegistryURL[]} */
 							const matchingRegistries = [];
@@ -518,10 +543,14 @@ export default {
 								}
 							});
 
+							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
+
 							// Check for multiple pattern matches
 							if (matchingRegistries.length > 1) {
 								context.report({
 									node,
+									loc,
 									messageId: 'multipleRegistryMatches',
 									data: {
 										package: name,
@@ -540,6 +569,7 @@ export default {
 								// No registry configured for this package - report error
 								context.report({
 									node,
+									loc,
 									messageId: 'disallowedPackageRegistry',
 									data: {
 										package: name,
@@ -554,6 +584,7 @@ export default {
 							if (registry !== expectedRegistry) {
 								context.report({
 									node,
+									loc,
 									messageId: 'disallowedPackageRegistry',
 									data: {
 										package: name,
@@ -618,7 +649,7 @@ export default {
 				lockfiles.forEach((lockfileName) => {
 					const lockfilePath = join(dir, lockfileName);
 
-					/** @type {RegistryURL[]} */
+					/** @type {RegistryWithLine[]} */
 					let registries;
 					try {
 						registries = extractRegistriesFromLockfile(lockfilePath);
@@ -637,10 +668,13 @@ export default {
 						return;
 					}
 
-					registries.forEach((registry) => {
+					registries.forEach(({ registry, line }) => {
 						if (!normalizedAllowed.includes(registry)) {
+							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 							context.report({
 								node,
+								loc,
 								messageId: 'disallowedRegistry',
 								data: {
 									filename: lockfileName,

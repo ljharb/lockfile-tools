@@ -11,6 +11,7 @@ import { loadLockfileContent, getLockfileName } from './io.mjs';
  * @property {string} name - Package name
  * @property {string | null} resolved - Resolved URL
  * @property {string | null} integrity - Integrity hash
+ * @property {number} line - Line number where this entry starts (1-indexed)
  * @property {Record<string, string | null>} [otherFields] - Additional parsed fields
  */
 
@@ -24,10 +25,13 @@ export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integ
 	const lines = content.split('\n');
 	/** @type {string | null} */
 	let currentPackage = null;
+	/** @type {number} */
+	let currentPackageLine = 0;
 	/** @type {Record<string, string | null>} */
 	let currentFields = {};
 
-	lines.forEach((line) => {
+	lines.forEach((line, index) => {
+		const lineNumber = index + 1; // 1-indexed
 		// New package entry
 		if (line.match(/^[^#\s]/) && line.includes(':')) {
 			// Save previous package if it exists
@@ -36,10 +40,12 @@ export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integ
 					name: currentPackage,
 					resolved: currentFields.resolved || null,
 					integrity: currentFields.integrity || null,
+					line: currentPackageLine,
 					otherFields: currentFields,
 				};
 			}
 			currentPackage = line.split(':')[0].trim().replace(/"/g, '');
+			currentPackageLine = lineNumber;
 			currentFields = {};
 		}
 
@@ -59,6 +65,7 @@ export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integ
 			name: currentPackage,
 			resolved: currentFields.resolved || null,
 			integrity: currentFields.integrity || null,
+			line: currentPackageLine,
 			otherFields: currentFields,
 		};
 	}
@@ -71,6 +78,7 @@ export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integ
  * @property {string} name - Package name
  * @property {string | null} resolved - Resolved URL (tarball)
  * @property {string | null} integrity - Integrity hash
+ * @property {number} line - Line number where this entry starts (1-indexed)
  * @property {Record<string, string | null>} [otherFields] - Additional parsed fields
  */
 
@@ -85,10 +93,13 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 	let inPackages = false;
 	/** @type {string | null} */
 	let currentPackage = null;
+	/** @type {number} */
+	let currentPackageLine = 0;
 	/** @type {Record<string, string | null>} */
 	let currentFields = {};
 
-	lines.forEach((line) => {
+	lines.forEach((line, index) => {
+		const lineNumber = index + 1; // 1-indexed
 		if (line.startsWith('packages:')) {
 			inPackages = true;
 			return;
@@ -105,10 +116,12 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 						resolved: currentFields.tarball || null,
 						/* c8 ignore stop */
 						integrity: currentFields.integrity || null,
+						line: currentPackageLine,
 						otherFields: currentFields,
 					};
 				}
 				currentPackage = line.split(':')[0].trim().replace(/['"]/g, '');
+				currentPackageLine = lineNumber;
 				currentFields = {};
 			}
 
@@ -142,6 +155,7 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 			name: currentPackage,
 			resolved: currentFields.tarball || null,
 			integrity: currentFields.integrity || null,
+			line: currentPackageLine,
 			otherFields: currentFields,
 		};
 	}
