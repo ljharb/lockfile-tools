@@ -5,7 +5,8 @@
 	"description": "Tests for eslint-plugin-lockfile",
 	"scripts": {
 		"tests-only": "NYC_CWD=../.. NODE_OPTIONS='--import ./coverage-loader.mjs' nyc --hook-require=false tape './*.mjs' './**/*.mjs'",
-		"test": "npm run tests-only"
+		"test": "npm run tests-only",
+		"preversion": "echo \"use \\`npm run --no-workspaces version\\` in a subpackage directly\" && exit 1"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
