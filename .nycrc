@@ -11,6 +11,7 @@
 		"**/node_modules",
 		"eslint.config.mjs",
 		"packages/tests",
-		"**/*.d.*ts"
+		"**/*.d.*ts",
+		"release.mjs"
 	]
 }

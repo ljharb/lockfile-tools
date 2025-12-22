@@ -1,5 +1,11 @@
 import test from 'tape';
 import esmock from 'esmock';
+import { createRequire } from 'module';
+
+// Resolve @npmcli/arborist from the lockfile-tools/virtual context
+const virtualPath = await import.meta.resolve('lockfile-tools/virtual');
+const require = createRequire(virtualPath);
+const arboristPath = require.resolve('@npmcli/arborist');
 
 test('buildVirtualLockfile - successful arborist load', async (t) => {
 	// Mock arborist to return a successful virtual tree
@@ -53,8 +59,8 @@ test('buildVirtualLockfile - successful arborist load', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
-		'@npmcli/arborist': MockArborist,
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {
+		[arboristPath]: { default: MockArborist },
 	});
 
 	const packages = await virtualLockfile.buildVirtualLockfile('/fake/path');
@@ -94,8 +100,8 @@ test('buildVirtualLockfile - arborist failure', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
-		'@npmcli/arborist': MockArborist,
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {
+		[arboristPath]: { default: MockArborist },
 	});
 
 	const packages = await virtualLockfile.buildVirtualLockfile('/fake/path');
@@ -133,8 +139,8 @@ test('buildVirtualLockfile - tree without edgesOut', async (t) => {
 		}
 	}
 
-	const virtualLockfile = await esmock('lockfile-tools/virtual', {}, {
-		'@npmcli/arborist': MockArborist,
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {
+		[arboristPath]: { default: MockArborist },
 	});
 
 	const packages = await virtualLockfile.buildVirtualLockfile('/fake/path');
