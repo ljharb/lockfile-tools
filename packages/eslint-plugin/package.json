@@ -27,7 +27,7 @@
 	"author": "Jordan Harband <ljharb@gmail.com>",
 	"license": "MIT",
 	"dependencies": {
-		"lockfile-tools": "^0.0.0",
+		"lockfile-tools": "^1.0.0",
 		"minimatch": "^10.1.1",
 		"pacote": "^21.0.4"
 	},

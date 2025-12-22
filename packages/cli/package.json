@@ -32,7 +32,7 @@
 	"dependencies": {
 		"eslint": "^8.8.0 || ^9.39.2",
 		"eslint-plugin-lockfile": "0.0.0",
-		"lockfile-tools": "0.0.0",
+		"lockfile-tools": "^1.0.0",
 		"pargs": "^1.2.1"
 	},
 	"devDependencies": {
