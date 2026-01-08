@@ -1,6 +1,6 @@
 {
 	"name": "lockfile-tools",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Utilities for parsing and working with npm ecosystem lockfiles",
 	"exports": {
 		"./package-managers": "./lib/package-managers.mjs",
