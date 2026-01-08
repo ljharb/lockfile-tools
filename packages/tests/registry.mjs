@@ -615,3 +615,111 @@ test('registry rule - virtual lockfile with default registry', async (t) => {
 
 	t.end();
 });
+
+test('registry rule - git+ssh URLs are not checked (non-registry specifiers)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+
+	try {
+		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+		writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+			lockfileVersion: 3,
+			packages: {
+				'node_modules/some-git-dep': {
+					version: '1.0.0',
+					resolved: 'git+ssh://git@github.com/user/repo.git#abc123',
+				},
+				'node_modules/has-flag': {
+					version: '4.0.0',
+					resolved: 'https://registry.npmjs.org/has-flag/-/has-flag-4.0.0.tgz',
+					integrity: 'sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==',
+				},
+			},
+		}));
+		writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+		// Only allow the default npm registry - git+ssh should NOT trigger an error
+		const eslint = createESLint({
+			files: ['**/*.js'],
+			plugins: { lockfile: plugin },
+			rules: {
+				'lockfile/registry': ['error', 'https://registry.npmjs.org'],
+			},
+		}, tmpDir);
+
+		const results = await eslint.lintFiles(['index.js']);
+		// The git+ssh URL should be ignored by the registry rule
+		// (it may be flagged by non-registry-specifiers rule separately, but not by registry)
+		t.equal(results[0].errorCount, 0, 'git+ssh URLs are not checked by registry rule');
+	} finally {
+		rmSync(tmpDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
+test('registry rule - git+https URLs are not checked (non-registry specifiers)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+
+	try {
+		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+		writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+			lockfileVersion: 3,
+			packages: {
+				'node_modules/some-git-dep': {
+					version: '1.0.0',
+					resolved: 'git+https://github.com/user/repo.git#abc123',
+				},
+			},
+		}));
+		writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+		// Only allow a custom registry - git+https should NOT trigger an error
+		const eslint = createESLint({
+			files: ['**/*.js'],
+			plugins: { lockfile: plugin },
+			rules: {
+				'lockfile/registry': ['error', 'https://custom-registry.example.com'],
+			},
+		}, tmpDir);
+
+		const results = await eslint.lintFiles(['index.js']);
+		t.equal(results[0].errorCount, 0, 'git+https URLs are not checked by registry rule');
+	} finally {
+		rmSync(tmpDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
+test('registry rule - file: URLs are not checked (non-registry specifiers)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+
+	try {
+		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+		writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+			lockfileVersion: 3,
+			packages: {
+				'node_modules/local-dep': {
+					version: '1.0.0',
+					resolved: 'file:../local-dep',
+				},
+			},
+		}));
+		writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+		const eslint = createESLint({
+			files: ['**/*.js'],
+			plugins: { lockfile: plugin },
+			rules: {
+				'lockfile/registry': ['error', 'https://registry.npmjs.org'],
+			},
+		}, tmpDir);
+
+		const results = await eslint.lintFiles(['index.js']);
+		t.equal(results[0].errorCount, 0, 'file: URLs are not checked by registry rule');
+	} finally {
+		rmSync(tmpDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});

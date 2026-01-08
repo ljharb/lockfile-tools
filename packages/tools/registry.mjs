@@ -44,8 +44,12 @@ export function extractRegistryFromUrl(resolved) {
 			}
 		}
 
-		// Fallback: just return protocol + host (for non-standard URLs)
-		return /** @type {RegistryURL} */ (`${url.protocol}//${url.host}`);
+		// Fallback: just return protocol + host for http(s) URLs only
+		// Non-registry schemes (git+ssh, git+https, git, file, etc.) should return null
+		if (url.protocol === 'https:' || url.protocol === 'http:') {
+			return /** @type {RegistryURL} */ (`${url.protocol}//${url.host}`);
+		}
+		return null;
 	} catch {
 		return null;
 	}
