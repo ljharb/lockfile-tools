@@ -39,7 +39,7 @@
 	"homepage": "https://github.com/ljharb/lockfile-tools#readme",
 	"dependencies": {
 		"@hyrious/bun.lockb": "^0.0.4",
-		"@npmcli/arborist": "^9.1.9"
+		"@npmcli/arborist": "^9.1.10"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
