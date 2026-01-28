@@ -494,7 +494,8 @@ export default {
 				}
 
 				// Process lockfiles sequentially to ensure proper error handling
-				for (const lockfileName of lockfiles) {
+				for (let li = 0; li < lockfiles.length; li++) { // eslint-disable-line no-restricted-syntax
+					const lockfileName = lockfiles[li];
 					const lockfilePath = join(dir, lockfileName);
 
 					/** @type {PackageBinInfo[]} */

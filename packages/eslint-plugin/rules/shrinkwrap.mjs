@@ -399,7 +399,8 @@ export default {
 					return;
 				}
 
-				for (const lockfileName of lockfiles) {
+				for (let li = 0; li < lockfiles.length; li++) {
+					const lockfileName = lockfiles[li];
 					const lockfilePath = join(dir, lockfileName);
 
 					/** @type {PackageEntry[]} */

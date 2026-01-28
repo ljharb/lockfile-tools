@@ -212,19 +212,19 @@ function findCachedTarballByUrl(resolved) {
 
 			if (existsSync(indexDir)) {
 				const indexFiles = readdirSync(indexDir);
-				for (const indexFile of indexFiles) {
+				for (let fi = 0; fi < indexFiles.length; fi++) {
 					try {
-						const indexPath = join(indexDir, indexFile);
+						const indexPath = join(indexDir, indexFiles[fi]);
 						const indexContent = readFileSync(indexPath, 'utf8');
 						/*
 						 * Cache index files contain newline-delimited entries
 						 * Each line has format: <hash>\t<json>
 						 */
 						const lines = indexContent.split('\n').filter(Boolean);
-						for (const line of lines) {
-							const tabIndex = line.indexOf('\t');
+						for (let li = 0; li < lines.length; li++) {
+							const tabIndex = lines[li].indexOf('\t');
 							if (tabIndex !== -1) {
-								const jsonPart = line.slice(tabIndex + 1);
+								const jsonPart = lines[li].slice(tabIndex + 1);
 								const indexEntry = parse(jsonPart);
 								if (indexEntry.key === cacheKey) {
 									// Found the index entry for this URL, now get the content
@@ -540,14 +540,8 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const dir = dirname(context.filename ?? context.getFilename());
 
-				/** @type {Promise<void>[]} */
-				const promises = [];
-				for (const filename of lockfiles) {
-					promises.push(processLockfile(node, dir, filename));
-				}
-
 				// Return the combined promise for ESLint to wait on
-				return Promise.all(promises);
+				return Promise.all(lockfiles.map((filename) => processLockfile(node, dir, filename)));
 			},
 		};
 	},
