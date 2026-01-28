@@ -512,7 +512,7 @@ export default {
 			const unresolvedPackages = packages.filter((pkg) => !pkg.resolved);
 
 			// Report errors for packages without resolved URL (missing both resolved and integrity)
-			for (const pkg of unresolvedPackages) {
+			unresolvedPackages.forEach((pkg) => {
 				/** @type {import('eslint').AST.SourceLocation | undefined} */
 				const loc = pkg.line ? { start: { line: pkg.line, column: 0 }, end: { line: pkg.line, column: 0 } } : undefined;
 				if (!pkg.integrity) {
@@ -529,7 +529,7 @@ export default {
 					messageId: 'missingResolved',
 					data: { name: pkg.name, filename },
 				});
-			}
+			});
 
 			// Process all packages with registry URLs in parallel
 			return Promise.all(registryPackages.map((pkg) => processPackage(node, filename, pkg))).then(() => {});

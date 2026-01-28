@@ -44,9 +44,9 @@ export async function buildVirtualLockfile(dir) {
 
 		// Get direct dependencies from root
 		if (tree.edgesOut) {
-			for (const [name] of tree.edgesOut) {
+			tree.edgesOut.forEach((_value, name) => {
 				directDeps.add(name);
-			}
+			});
 		}
 
 		return tree.inventory
