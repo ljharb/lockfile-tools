@@ -399,7 +399,7 @@ export default {
 			description: 'detect binary name conflicts between packages',
 			category: 'Possible Errors',
 			recommended: true,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/binary-conflicts.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/binary-conflicts.md',
 		},
 		schema: [],
 		messages: {

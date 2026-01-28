@@ -328,7 +328,7 @@ export default {
 			description: 'enforce allowed registries in lockfiles',
 			category: 'Possible Errors',
 			recommended: true,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/registry.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/registry.md',
 		},
 		schema: [
 			{

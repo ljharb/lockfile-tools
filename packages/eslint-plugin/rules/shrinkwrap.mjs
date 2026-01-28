@@ -274,7 +274,7 @@ export default {
 			description: 'detect dependencies that include an npm-shrinkwrap.json',
 			category: 'Possible Errors',
 			recommended: true,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/shrinkwrap.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/shrinkwrap.md',
 		},
 		schema: [
 			{

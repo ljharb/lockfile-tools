@@ -103,7 +103,7 @@ export default {
 			description: 'enforce allowed lockfile formats',
 			category: 'Possible Errors',
 			recommended: true,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/flavor.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/flavor.md',
 		},
 		schema: [
 			{

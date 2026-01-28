@@ -359,7 +359,7 @@ export default {
 			description: 'enforce integrity values in lockfiles',
 			category: 'Possible Errors',
 			recommended: true,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/integrity.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/integrity.md',
 		},
 		schema: [
 			{

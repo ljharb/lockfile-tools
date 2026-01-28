@@ -194,7 +194,7 @@ export default {
 			description: 'warn on dependencies from non-registry sources',
 			category: 'Possible Errors',
 			recommended: false,
-			url: 'https://github.com/ljharb/eslint-plugin-lockfile/blob/main/docs/rules/non-registry-specifiers.md',
+			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/non-registry-specifiers.md',
 		},
 		schema: [
 			{
