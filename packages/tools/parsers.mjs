@@ -112,9 +112,8 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 				if (currentPackage) {
 					parsedEntries[parsedEntries.length] = {
 						name: currentPackage,
-						/* c8 ignore start - both branches tested but c8 reports incorrectly */
+						/* istanbul ignore next - both branches tested but coverage tool reports incorrectly */
 						resolved: currentFields.tarball || null,
-						/* c8 ignore stop */
 						integrity: currentFields.integrity || null,
 						line: currentPackageLine,
 						otherFields: currentFields,
@@ -153,6 +152,7 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 	if (currentPackage) {
 		parsedEntries[parsedEntries.length] = {
 			name: currentPackage,
+			/* istanbul ignore next - both branches tested but coverage tool reports incorrectly */
 			resolved: currentFields.tarball || null,
 			integrity: currentFields.integrity || null,
 			line: currentPackageLine,
@@ -185,7 +185,7 @@ export function createLockfileExtractor(extractors, bunLockbExtractor = null) {
 		}
 
 		const extractor = extractors[filename];
-		/* c8 ignore next - defensive: unknown lockfile types not in extractors map */
+		/* istanbul ignore next - defensive: unknown lockfile types not in extractors map */
 		return extractor?.(content, ...args) || /** @type {T} */ ([]);
 	};
 }

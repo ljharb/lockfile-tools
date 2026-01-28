@@ -27,7 +27,6 @@ const { values } = Object;
 function getDefaultRegistry() {
 	try {
 		return execSync('npm config get registry', { encoding: 'utf8' }).trim();
-		/* istanbul ignore next - defensive: npm config rarely fails in practice */
 	} catch {
 		return 'https://registry.npmjs.org/';
 	}
@@ -181,9 +180,8 @@ function extractRegistriesFromLockfile(filepath) {
 	}
 
 	const extract = extracts[filename];
-	/* istanbul ignore start - defensive: rule only checks known lockfile types */
+	/* istanbul ignore next - defensive: unknown lockfile types not in extractors map */
 	return extract?.(content) || [];
-	/* istanbul ignore stop */
 }
 
 // Extract package names with their registries for pattern matching
@@ -247,7 +245,6 @@ function extractPackageRegistriesFromYarnLockfile(content) {
 			const registry = extractRegistryFromUrl(resolved);
 			if (registry) {
 				const nameMatch = name.match(/^(@?[^@]+)/);
-				/* istanbul ignore next - defensive: yarn package names always match this pattern */
 				const pkgName = nameMatch ? nameMatch[1] : name;
 				packages.push({
 					name: pkgName,
@@ -275,7 +272,6 @@ function extractPackageRegistriesFromPnpmLockfile(content) {
 			if (registry) {
 				// Extract package name from pnpm key format: "pkg@version" or "@scope/pkg@version"
 				const nameMatch = name.match(/^(@?[^@]+)/);
-				/* istanbul ignore next - defensive: pnpm package names always match this pattern */
 				const pkgName = nameMatch ? nameMatch[1] : name;
 				packages.push({
 					name: pkgName,
@@ -319,10 +315,9 @@ function extractPackageRegistriesFromLockfile(filepath) {
 	if (filename === 'pnpm-lock.yaml') {
 		return extractPackageRegistriesFromPnpmLockfile(content);
 	}
-	/* istanbul ignore start - defensive: rule only checks known lockfile types */
 
+	/* istanbul ignore next - defensive: all known lockfile types are handled above */
 	return [];
-	/* istanbul ignore stop */
 }
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -472,7 +467,6 @@ export default {
 							}
 
 							// Determine expected registry
-							/* istanbul ignore next 2 - defensive: matchingRegistries.length can only be 0 or 1 here */
 							const expectedRegistry = matchingRegistries.length === 1
 								? matchingRegistries[0]
 								: defaultRegistry;
@@ -522,9 +516,7 @@ export default {
 								messageId: 'malformedLockfile',
 								data: {
 									filename: lockfileName,
-									/* istanbul ignore start - defensive: all real errors are Error instances */
 									error: e instanceof Error ? e.message : String(e),
-									/* istanbul ignore stop */
 								},
 							});
 							return;
@@ -660,9 +652,7 @@ export default {
 							messageId: 'malformedLockfile',
 							data: {
 								filename: lockfileName,
-								/* istanbul ignore start - defensive: all real errors are Error instances */
 								error: e instanceof Error ? e.message : String(e),
-								/* istanbul ignore stop */
 							},
 						});
 						return;

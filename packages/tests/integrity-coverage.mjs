@@ -2,8 +2,29 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
+
+/** @type {(rule: import('eslint').Rule.RuleModule, testFile: string, options?: unknown[]) => Promise<{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]>} */
+async function runRule(rule, testFile, options) {
+	/** @type {{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		options: options || [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }} info */
+		report(info) {
+			reports.push(info);
+		},
+	};
+	// @ts-expect-error mock context
+	const ruleInstance = rule.create(context);
+	// @ts-expect-error mock node
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {*} */ ({ type: 'Program' }));
+	return reports;
+}
 
 test('integrity rule - invalid integrity format without algorithm match', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
@@ -163,3 +184,582 @@ test('integrity rule - skips workspace packages with link: true', async (t) => {
 
 	t.end();
 });
+
+test('integrity rule - bun lockfile entries that are not arrays or have length < 4', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'bun.lock'), JSON.stringify({
+		packages: {
+			bad: 'not-an-array',
+			short: [1, 2, 3],
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/integrity': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	// Non-array and short-array entries should be silently skipped
+	t.equal(
+		results[0].messages.filter((m) => m.message.includes('bun.lock')).length,
+		0,
+		'no errors for bun.lock with non-array and short-array entries',
+	);
+	t.end();
+});
+
+test('integrity rule - vlt lockfile entries that are not arrays or have length < 3', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'vlt-lock.json'), JSON.stringify({
+		nodes: {
+			bad: 'not-an-array',
+			short: [1, 2],
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/integrity': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	// Non-array and short-array entries should be silently skipped
+	t.equal(
+		results[0].messages.filter((m) => m.message.includes('vlt-lock.json')).length,
+		0,
+		'no errors for vlt-lock.json with non-array and short-array entries',
+	);
+	t.end();
+});
+
+test('integrity rule - incorrect integrity hash reports incorrectIntegrity', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	// Use a valid sha512 format but with a hash that won't match 'fake tarball content'
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'reports incorrectIntegrity for mismatched hash',
+	);
+	t.end();
+});
+
+test('integrity rule - downloadTarball non-Error thrown value', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		pacote: {
+			async tarball() { throw 'string error'; }, // eslint-disable-line no-throw-literal
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'downloadFailed'),
+		'reports downloadFailed for non-Error thrown value',
+	);
+	t.ok(
+		reports.some((r) => r.data && r.data.error === 'string error'),
+		'error message is the stringified thrown value',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache dir does not exist (findCachedTarballByUrl returns null)', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return '/nonexistent-home-dir-for-test'; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache dir doesn't exist, falls through to pacote download, hash won't match
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'reports incorrectIntegrity when cache dir is missing and download hash mismatches',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache index dir does not exist (cache miss path)', async (t) => {
+	const cacheTmpDir = mkdtempSync(join(tmpdir(), 'eslint-npm-cache-test-'));
+	const { mkdirSync } = await import('fs');
+	mkdirSync(join(cacheTmpDir, '.npm', '_cacache'), { recursive: true });
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return cacheTmpDir; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+		rmSync(cacheTmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache exists but index dir doesn't, falls through to pacote download
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'reports incorrectIntegrity when cache index dir is missing',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache index exists but content hash does not match URL (cache miss)', async (t) => {
+	const { mkdirSync } = await import('fs');
+	const { createHash } = await import('crypto');
+	const cacheTmpDir = mkdtempSync(join(tmpdir(), 'eslint-npm-cache-test-'));
+
+	// Set up a fake npm cache with an index entry for a different URL
+	const cacheDir = join(cacheTmpDir, '.npm', '_cacache');
+	const resolvedUrl = 'https://registry.npmjs.org/example/-/example-1.0.0.tgz';
+	const cacheKey = `make-fetch-happen:request-cache:${resolvedUrl}`;
+	const urlHash = createHash('sha256').update(cacheKey).digest('hex');
+	const indexDir = join(cacheDir, 'index-v5', urlHash.slice(0, 2), urlHash.slice(2, 4));
+	mkdirSync(indexDir, { recursive: true });
+
+	// Write an index file with a mismatched key so the content lookup fails
+	const indexEntry = JSON.stringify({ key: 'different-key', integrity: 'sha512-abc' });
+	const indexContent = `abcdef\t${indexEntry}`;
+	writeFileSync(join(indexDir, 'entry1'), indexContent);
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return cacheTmpDir; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+		rmSync(cacheTmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: resolvedUrl,
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache index exists but key doesn't match, falls through to download
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'falls through to download when cache key does not match',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache index matches URL but cached content file missing', async (t) => {
+	const { mkdirSync } = await import('fs');
+	const { createHash } = await import('crypto');
+	const cacheTmpDir = mkdtempSync(join(tmpdir(), 'eslint-npm-cache-test-'));
+
+	// Set up a fake npm cache with an index entry that matches the URL
+	const cacheDir = join(cacheTmpDir, '.npm', '_cacache');
+	const resolvedUrl = 'https://registry.npmjs.org/example/-/example-1.0.0.tgz';
+	const cacheKey = `make-fetch-happen:request-cache:${resolvedUrl}`;
+	const urlHash = createHash('sha256').update(cacheKey).digest('hex');
+	const indexDir = join(cacheDir, 'index-v5', urlHash.slice(0, 2), urlHash.slice(2, 4));
+	mkdirSync(indexDir, { recursive: true });
+
+	// Write an index file with the correct key but point to a nonexistent content file
+	const contentIntegrity = `sha512-${Buffer.from('fake-hash').toString('base64')}`;
+	const indexEntry = JSON.stringify({
+		key: cacheKey,
+		integrity: contentIntegrity,
+	});
+	const indexContent = `abcdef\t${indexEntry}`;
+	writeFileSync(join(indexDir, 'entry1'), indexContent);
+	// Don't create the content file - this tests the cachedPath existsSync check
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return cacheTmpDir; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+		rmSync(cacheTmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: resolvedUrl,
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache index matches but content file is missing, falls through to download
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'falls through to download when cached content file is missing',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache content integrity format without valid match', async (t) => {
+	const { mkdirSync } = await import('fs');
+	const { createHash } = await import('crypto');
+	const cacheTmpDir = mkdtempSync(join(tmpdir(), 'eslint-npm-cache-test-'));
+
+	// Set up a fake npm cache with an index entry that has invalid integrity format
+	const cacheDir = join(cacheTmpDir, '.npm', '_cacache');
+	const resolvedUrl = 'https://registry.npmjs.org/example/-/example-1.0.0.tgz';
+	const cacheKey = `make-fetch-happen:request-cache:${resolvedUrl}`;
+	const urlHash = createHash('sha256').update(cacheKey).digest('hex');
+	const indexDir = join(cacheDir, 'index-v5', urlHash.slice(0, 2), urlHash.slice(2, 4));
+	mkdirSync(indexDir, { recursive: true });
+
+	// Write an index file with the correct key but invalid integrity format (no algo-hash match)
+	const indexEntry = JSON.stringify({
+		key: cacheKey,
+		integrity: 'invalid-format-no-match',
+	});
+	const indexContent = `abcdef\t${indexEntry}`;
+	writeFileSync(join(indexDir, 'entry1'), indexContent);
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return cacheTmpDir; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+		rmSync(cacheTmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: resolvedUrl,
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache index key matches but integrity format is invalid, falls through to download
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'falls through to download when cache integrity format is invalid',
+	);
+	t.end();
+});
+
+test('integrity rule - malformed lockfile with non-Error thrown value', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {
+		'lockfile-tools/parsers': {
+			parseYarnLockfile() { throw 'parser string error'; }, // eslint-disable-line no-throw-literal
+			parsePnpmLockfile() { throw 'parser string error'; }, // eslint-disable-line no-throw-literal
+			createLockfileExtractor() {
+				return () => {
+					throw 'non-error thrown'; // eslint-disable-line no-throw-literal
+				};
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/example/-/example-1.0.0.tgz',
+				integrity: 'sha512-xxx',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'malformedLockfile'),
+		'reports malformedLockfile',
+	);
+	t.ok(
+		reports.some((r) => r.data && r.data.error === 'non-error thrown'),
+		'error message is the stringified non-Error value',
+	);
+	t.end();
+});
+
+test('integrity rule - bun lockfile without packages key (line 116 falsy branch)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	// bun.lock without a "packages" key - should not crash, just return empty packages
+	writeFileSync(join(tmpDir, 'bun.lock'), JSON.stringify({
+		lockfileVersion: 0,
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/integrity': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(
+		results[0].messages.filter((m) => m.message.includes('bun.lock')).length,
+		0,
+		'no errors for bun.lock without packages key',
+	);
+	t.end();
+});
+
+test('integrity rule - vlt lockfile without nodes key (line 156 falsy branch)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	// vlt-lock.json without a "nodes" key - should not crash, just return empty packages
+	writeFileSync(join(tmpDir, 'vlt-lock.json'), JSON.stringify({
+		lockfileVersion: 0,
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/integrity': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(
+		results[0].messages.filter((m) => m.message.includes('vlt-lock.json')).length,
+		0,
+		'no errors for vlt-lock.json without nodes key',
+	);
+	t.end();
+});
+
+test('integrity rule - npm cache index line without tab (line 226 falsy branch)', async (t) => {
+	const { mkdirSync } = await import('fs');
+	const { createHash } = await import('crypto');
+	const cacheTmpDir = mkdtempSync(join(tmpdir(), 'eslint-npm-cache-test-'));
+
+	const cacheDir = join(cacheTmpDir, '.npm', '_cacache');
+	const resolvedUrl = 'https://registry.npmjs.org/example/-/example-1.0.0.tgz';
+	const cacheKey = `make-fetch-happen:request-cache:${resolvedUrl}`;
+	const urlHash = createHash('sha256').update(cacheKey).digest('hex');
+	const indexDir = join(cacheDir, 'index-v5', urlHash.slice(0, 2), urlHash.slice(2, 4));
+	mkdirSync(indexDir, { recursive: true });
+
+	// Write an index file with a line that has NO tab character
+	writeFileSync(join(indexDir, 'entry1'), 'no-tab-in-this-line');
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		os: {
+			homedir() { return cacheTmpDir; },
+		},
+		pacote: {
+			async tarball() { return Buffer.from('fake tarball content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+		rmSync(cacheTmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'node_modules/example': {
+				version: '1.0.0',
+				resolved: resolvedUrl,
+				integrity: 'sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const reports = await runRule(rule.default, testFile);
+
+	// Cache index has a line without tab, so tabIndex === -1, skipping that line
+	t.ok(reports.length > 0, 'at least one report');
+	t.ok(
+		reports.some((r) => r.messageId === 'incorrectIntegrity'),
+		'falls through to download when cache index line has no tab',
+	);
+	t.end();
+});
+
+test('integrity rule - context.getFilename() fallback when context.filename is undefined', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/integrity.mjs', {}, {
+		pacote: {
+			async tarball() { return Buffer.from('content'); },
+			async manifest() { return {}; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	// No lockfiles - just testing the getFilename fallback path
+
+	const testFile = join(tmpDir, 'index.js');
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) { reports.push(info); },
+	};
+	const ruleInstance = rule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {*} */ ({ type: 'Program' }));
+
+	t.equal(reports.length, 0, 'no errors when using getFilename() fallback');
+	t.end();
+});
+

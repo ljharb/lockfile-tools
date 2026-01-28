@@ -2,6 +2,7 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
@@ -509,7 +510,6 @@ test('registry rule - object config skips workspace packages with link: true', a
 });
 
 test('registry rule - virtual lockfile with object config (lines 418-492)', async (t) => {
-	const { default: esmock } = await import('esmock');
 	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
 		'lockfile-tools/virtual': {
 			hasLockfile: () => false,
@@ -560,7 +560,6 @@ test('registry rule - virtual lockfile with object config (lines 418-492)', asyn
 });
 
 test('registry rule - virtual lockfile with wrong registry (lines 478-489)', async (t) => {
-	const { default: esmock } = await import('esmock');
 	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
 		'lockfile-tools/virtual': {
 			hasLockfile: () => false,
@@ -612,7 +611,6 @@ test('registry rule - virtual lockfile with wrong registry (lines 478-489)', asy
 });
 
 test('registry rule - virtual lockfile with multiple pattern matches (lines 445-454)', async (t) => {
-	const { default: esmock } = await import('esmock');
 	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
 		'lockfile-tools/virtual': {
 			hasLockfile: () => false,
@@ -665,7 +663,6 @@ test('registry rule - virtual lockfile with multiple pattern matches (lines 445-
 });
 
 test('registry rule - virtual lockfile with no pattern match (lines 463-476)', async (t) => {
-	const { default: esmock } = await import('esmock');
 	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
 		'lockfile-tools/virtual': {
 			hasLockfile: () => false,
@@ -718,7 +715,6 @@ test('registry rule - virtual lockfile with no pattern match (lines 463-476)', a
 });
 
 test('registry rule - virtual lockfile with string config (lines 599-602, 608-609)', async (t) => {
-	const { default: esmock } = await import('esmock');
 	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
 		'lockfile-tools/virtual': {
 			hasLockfile: () => false,
@@ -764,6 +760,997 @@ test('registry rule - virtual lockfile with string config (lines 599-602, 608-60
 	t.ok(reports.length > 0, 'error reported when virtual lockfile uses disallowed registry with string config');
 	t.equal(reports[0].messageId, 'disallowedRegistry', 'correct message ID');
 
+	t.end();
+});
+
+test('registry rule - getDefaultRegistry catch branch (line 30)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {}, {
+		// eslint-disable-next-line camelcase
+		child_process: {
+			execSync() { throw new Error('command failed'); },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': {
+				name: 'test',
+				dependencies: {
+					tape: '^5.0.0',
+				},
+			},
+			'node_modules/tape': {
+				version: '5.7.5',
+				resolved: 'https://registry.npmjs.org/tape/-/tape-5.7.5.tgz',
+			},
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	// When execSync fails, default registry becomes https://registry.npmjs.org/
+	// Our lockfile uses that registry, so there should be no errors
+	t.equal(reports.length, 0, 'no errors when fallback default registry matches lockfile');
+
+	t.end();
+});
+
+test('registry rule - npm lockfile with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': {
+				name: 'test',
+				dependencies: {
+					'my-private-pkg': '^1.0.0',
+				},
+			},
+			'node_modules/my-private-pkg': {
+				version: '1.0.0',
+				resolved: 'git+ssh://git@github.com/myorg/my-private-pkg.git#abc123',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/registry': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in npm lockfile');
+	t.end();
+});
+
+test('registry rule - yarn.lock with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	const yarnLock = `# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+
+my-private-pkg@^1.0.0:
+  version "1.0.0"
+  resolved "git+ssh://git@github.com/myorg/my-private-pkg.git#abc123"
+  integrity sha512-xxx`;
+
+	writeFileSync(join(tmpDir, 'yarn.lock'), yarnLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/registry': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in yarn.lock');
+	t.end();
+});
+
+test('registry rule - pnpm-lock.yaml with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	const pnpmLock = `lockfileVersion: '9.0'
+
+packages:
+  /my-private-pkg@1.0.0:
+    resolution: {tarball: git+ssh://git@github.com/myorg/my-private-pkg.git#abc123}
+    engines: {node: '>=6'}`;
+
+	writeFileSync(join(tmpDir, 'pnpm-lock.yaml'), pnpmLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/registry': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in pnpm-lock.yaml');
+	t.end();
+});
+
+test('registry rule - extract returns null/falsy (|| [] branch in extractRegistriesFromLockfile)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/io': {
+			loadLockfileContent() { return 'some content'; },
+			loadBunLockbContent() { return null; },
+			getLockfileName(/** @type {string} */ fp) { return fp.split('/').pop(); },
+			findJsonKeyLine() { return 0; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	// Create a fake lockfile name that is not in the extracts map
+	// This forces extract?.(content) to be undefined, hitting || []
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	// With a mocked getLockfileName returning arbitrary names, the extract will be undefined
+	// and || [] will be hit, resulting in no registries found and no errors
+	t.equal(reports.length, 0, 'no errors when extract returns falsy');
+
+	t.end();
+});
+
+test('registry rule - bun.lockb with null content (extractRegistriesFromBunLockbBinary)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/io': {
+			loadLockfileContent(/** @type {string} */ fp) { return fp.includes('bun.lockb') ? null : null; },
+			loadBunLockbContent() { return null; },
+			getLockfileName(/** @type {string} */ fp) { return fp.split('/').pop(); },
+			findJsonKeyLine() { return 0; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'bun.lockb'), '');
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	t.equal(reports.length, 0, 'no errors when bun.lockb content is null');
+
+	t.end();
+});
+
+test('registry rule - pnpm name regex no match in extractPackageRegistriesFromPnpmLockfile', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	// pnpm lockfile where the package name is empty string (no match for /^(@?[^@]+)/)
+	const pnpmLock = `lockfileVersion: '9.0'
+
+packages:
+  /@5.7.5:
+    resolution: {tarball: https://registry.npmjs.org/tape/-/tape-5.7.5.tgz}
+    engines: {node: '>=6'}`;
+
+	writeFileSync(join(tmpDir, 'pnpm-lock.yaml'), pnpmLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results.length > 0, 'ESLint ran successfully with odd pnpm package name');
+	t.end();
+});
+
+test('registry rule - context.getFilename() fallback in object config path', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': {
+				name: 'test',
+				dependencies: {
+					tape: '^5.0.0',
+				},
+			},
+			'node_modules/tape': {
+				version: '5.7.5',
+				resolved: 'https://registry.npmjs.org/tape/-/tape-5.7.5.tgz',
+			},
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: [{
+			'https://registry.npmjs.org': true,
+		}],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	t.equal(reports.length, 0, 'no errors when using getFilename() fallback with object config');
+
+	t.end();
+});
+
+test('registry rule - context.getFilename() fallback in string config path', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': {
+				name: 'test',
+				dependencies: {
+					tape: '^5.0.0',
+				},
+			},
+			'node_modules/tape': {
+				version: '5.7.5',
+				resolved: 'https://registry.npmjs.org/tape/-/tape-5.7.5.tgz',
+			},
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	t.equal(reports.length, 0, 'no errors when using getFilename() fallback with string config');
+
+	t.end();
+});
+
+test('registry rule - non-Error thrown in object config lockfile path', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/io': {
+			loadLockfileContent(/** @type {string} */ fp) {
+				if (fp.includes('package-lock.json')) {
+					throw 'string error'; // eslint-disable-line no-throw-literal
+				}
+				return null;
+			},
+			loadBunLockbContent() { return null; },
+			getLockfileName(/** @type {string} */ fp) { return fp.split('/').pop(); },
+			findJsonKeyLine() { return 0; },
+		},
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), '{ broken }');
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: [{
+			'https://registry.npmjs.org': true,
+		}],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	const malformedReport = reports.find((r) => r.messageId === 'malformedLockfile');
+	t.ok(malformedReport, 'malformedLockfile reported for non-Error thrown');
+	t.equal(malformedReport && malformedReport.data && malformedReport.data.error, 'string error', 'String(e) used for non-Error');
+
+	t.end();
+});
+
+test('registry rule - non-Error thrown in string config lockfile path', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/io': {
+			loadLockfileContent(/** @type {string} */ fp) {
+				if (fp.includes('package-lock.json')) {
+					throw 42; // eslint-disable-line no-throw-literal
+				}
+				return null;
+			},
+			loadBunLockbContent() { return null; },
+			getLockfileName(/** @type {string} */ fp) { return fp.split('/').pop(); },
+			findJsonKeyLine() { return 0; },
+		},
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			tape: '^5.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), '{ broken }');
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	const malformedReport = reports.find((r) => r.messageId === 'malformedLockfile');
+	t.ok(malformedReport, 'malformedLockfile reported for non-Error thrown');
+	t.equal(malformedReport && malformedReport.data && malformedReport.data.error, '42', 'String(e) used for non-Error');
+
+	t.end();
+});
+
+test('registry rule - virtual lockfile string config with allowed registry', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => false,
+			buildVirtualLockfile: async () => [
+				{
+					name: 'some-package',
+					version: '1.0.0',
+					resolved: 'https://registry.npmjs.org/some-package/-/some-package-1.0.0.tgz',
+					integrity: 'sha512-xxx',
+					isDirect: true,
+				},
+			],
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'some-package': '^1.0.0',
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: testFile,
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	t.equal(reports.length, 0, 'no errors when virtual lockfile uses allowed registry with string config');
+
+	t.end();
+});
+
+test('registry rule - virtual lockfile string config with getFilename() fallback', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => false,
+			buildVirtualLockfile: async () => [
+				{
+					name: 'some-package',
+					version: '1.0.0',
+					resolved: 'https://custom.registry.com/some-package/-/some-package-1.0.0.tgz',
+					integrity: 'sha512-xxx',
+					isDirect: true,
+				},
+			],
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'some-package': '^1.0.0',
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: ['https://registry.npmjs.org'],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) {
+			reports.push(info);
+		},
+	}));
+
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+
+	t.ok(reports.length > 0, 'error reported using getFilename() fallback for string config virtual lockfile');
+	t.equal(reports[0].messageId, 'disallowedRegistry', 'correct message ID');
+
+	t.end();
+});
+
+test('registry rule - npm lockfile v1 with non-registry URL in dependencies (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 1,
+		dependencies: {
+			'my-private-pkg': {
+				version: '1.0.0',
+				resolved: 'git+ssh://git@github.com/myorg/my-private-pkg.git#abc123',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/registry': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in npm v1 lockfile');
+	t.end();
+});
+
+test('registry rule - object config npm lockfile with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': {
+				name: 'test',
+				dependencies: {
+					'my-private-pkg': '^1.0.0',
+				},
+			},
+			'node_modules/my-private-pkg': {
+				version: '1.0.0',
+				resolved: 'git+ssh://git@github.com/myorg/my-private-pkg.git#abc123',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in npm lockfile with object config');
+	t.end();
+});
+
+test('registry rule - object config npm v1 lockfile with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 1,
+		dependencies: {
+			'my-private-pkg': {
+				version: '1.0.0',
+				resolved: 'git+ssh://git@github.com/myorg/my-private-pkg.git#abc123',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in npm v1 lockfile with object config');
+	t.end();
+});
+
+test('registry rule - object config yarn.lock with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	const yarnLock = `# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+
+my-private-pkg@^1.0.0:
+  version "1.0.0"
+  resolved "git+ssh://git@github.com/myorg/my-private-pkg.git#abc123"
+  integrity sha512-xxx`;
+
+	writeFileSync(join(tmpDir, 'yarn.lock'), yarnLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in yarn.lock with object config');
+	t.end();
+});
+
+test('registry rule - object config pnpm-lock.yaml with non-registry URL (extractRegistryFromUrl returns null)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-private-pkg': '^1.0.0',
+		},
+	}));
+	const pnpmLock = `lockfileVersion: '9.0'
+
+packages:
+  /my-private-pkg@1.0.0:
+    resolution: {tarball: git+ssh://git@github.com/myorg/my-private-pkg.git#abc123}
+    engines: {node: '>=6'}`;
+
+	writeFileSync(join(tmpDir, 'pnpm-lock.yaml'), pnpmLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for git+ssh resolved URL in pnpm-lock.yaml with object config');
+	t.end();
+});
+
+test('registry rule - yarn.lock with package name that does not match name regex', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {},
+	}));
+	// yarn entry where the name starts with @@ so regex ^(@?[^@]+) fails
+	const yarnLock = '# yarn lockfile v1\n\n@@bad-name:\n  version "1.0.0"\n  resolved "https://registry.yarnpkg.com/x/-/x-1.0.0.tgz"\n';
+	writeFileSync(join(tmpDir, 'yarn.lock'), yarnLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.yarnpkg.com': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results.length > 0, 'ESLint ran with unusual yarn package name');
+	t.end();
+});
+
+test('registry rule - pnpm package name regex miss in object config (line 274)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {},
+	}));
+	// @@badpkg name won't match ^(@?[^@]+) regex, falling back to full name
+	const pnpmLock = "lockfileVersion: '9.0'\n\npackages:\n  @@badpkg@1.0.0:\n    resolution: {tarball: https://registry.npmjs.org/x/-/x-1.0.0.tgz}\n";
+	writeFileSync(join(tmpDir, 'pnpm-lock.yaml'), pnpmLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.npmjs.org': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results.length > 0, 'ESLint ran with pnpm name regex miss');
+	t.end();
+});
+
+test('registry rule - yarn entry name regex miss in object config (line 247)', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {},
+	}));
+	// @@bad name won't match ^(@?[^@]+) regex
+	const yarnLock = '# yarn lockfile v1\n\n@@bad:\n  version "1.0.0"\n  resolved "https://registry.yarnpkg.com/x/-/x-1.0.0.tgz"\n';
+	writeFileSync(join(tmpDir, 'yarn.lock'), yarnLock);
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: {
+			'lockfile/registry': ['error', {
+				'https://registry.yarnpkg.com': true,
+			}],
+		},
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results.length > 0, 'ESLint ran with yarn name regex miss');
+	t.end();
+});
+
+test('registry rule - object config with sourceCode fallback (getSourceCode)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: { '': { name: 'test' } },
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		sourceCode: undefined,
+		getSourceCode() { return { ast: { type: 'Program' } }; },
+		options: [{
+			'https://registry1.example.com': true,
+			'https://registry2.example.com': true,
+		}],
+		report(/** @type {unknown} */ info) { reports.push(/** @type {{ messageId?: string }} */ (info)); },
+	};
+	const ruleInstance = registryRule.default.create(context);
+	// multipleTrueRegistries is reported during create() and returns {}
+	t.deepEqual(ruleInstance, {}, 'returns empty handlers when multiple true registries');
+	t.ok(
+		reports.some((r) => r.messageId === 'multipleTrueRegistries'),
+		'reports multipleTrueRegistries using getSourceCode() fallback',
+	);
+	t.end();
+});
+
+test('registry rule - object config virtual lockfile uses defaultRegistry (expectedRegistry = defaultRegistry)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => false,
+			buildVirtualLockfile: async () => [
+				{
+					name: 'unmatched-pkg',
+					version: '1.0.0',
+					resolved: 'https://registry.npmjs.org/unmatched-pkg/-/unmatched-pkg-1.0.0.tgz',
+					integrity: 'sha512-xxx',
+					isDirect: true,
+				},
+			],
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: { 'unmatched-pkg': '^1.0.0' },
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		options: [{
+			'https://registry.npmjs.org': true,
+			'https://custom.example.com': ['@scoped/*'],
+		}],
+		report(/** @type {unknown} */ info) { reports.push(/** @type {{ messageId?: string; data?: Record<string, unknown> }} */ (info)); },
+	};
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	// unmatched-pkg doesn't match @scoped/* pattern, so it falls through to defaultRegistry
+	// defaultRegistry is https://registry.npmjs.org which matches, so no error
+	t.equal(reports.length, 0, 'no errors when defaultRegistry matches');
+	t.end();
+});
+
+test('registry rule - extractRegistriesFromLockfile with extract returning falsy (|| [] branch)', async (t) => {
+	const registryRule = await esmock('eslint-plugin-lockfile/rules/registry.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => true,
+		},
+		'lockfile-tools/io': {
+			loadLockfileContent(/** @type {string} */ fp) {
+				if (fp.includes('bun.lock')) {
+					return '{}';
+				}
+				return null;
+			},
+			loadBunLockbContent() { return null; },
+			getLockfileName(/** @type {string} */ fp) { return fp.split('/').pop(); },
+			findJsonKeyLine() { return 0; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'bun.lock'), '{}');
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		options: ['https://registry.npmjs.org'],
+		report(/** @type {unknown} */ info) { reports.push(/** @type {{ messageId?: string }} */ (info)); },
+	};
+	const ruleInstance = registryRule.default.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.equal(reports.length, 0, 'no errors when extract returns empty');
 	t.end();
 });
 

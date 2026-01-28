@@ -78,7 +78,6 @@ function getNonRegistryType(url) {
 	if ((/^https?:\/\//).test(url) && !isRegistryUrl(url)) {
 		return 'tarball URL';
 	}
-	/* istanbul ignore next - defensive: all known patterns are handled above */
 	return 'non-registry specifier';
 }
 
@@ -151,15 +150,12 @@ function extractDepsFromPnpmLockfile(content) {
 function extractDepsFromBunLockfile(_content) {
 	// bun.lock (text format) only stores package names and versions
 	// It doesn't store resolved URLs, so we can't detect non-registry specifiers
-	/* istanbul ignore start - bun.lock doesn't store resolved URLs */
 	return [];
-	/* istanbul ignore stop */
 }
 
 /** @type {(filepath: string) => DependencyInfo[]} */
 function extractDepsFromBunLockbBinary(filepath) {
 	const yarnLockContent = loadBunLockbContent(filepath);
-	/* istanbul ignore next - defensive: bun.lockb loading rarely fails */
 	if (!yarnLockContent) {
 		return [];
 	}
@@ -312,9 +308,7 @@ export default {
 							messageId: 'malformedLockfile',
 							data: {
 								filename: lockfileName,
-								/* istanbul ignore start - defensive: all real errors are Error instances */
 								error: e instanceof Error ? e.message : String(e),
-								/* istanbul ignore stop */
 							},
 						});
 						return;
@@ -323,11 +317,9 @@ export default {
 					deps.forEach(({
 						name, resolved, line,
 					}) => {
-						/* istanbul ignore start - defensive: packages without resolved URLs are filtered earlier */
 						if (!resolved) {
 							return;
 						}
-						/* istanbul ignore stop */
 
 						/** @type {import('eslint').AST.SourceLocation | undefined} */
 						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;

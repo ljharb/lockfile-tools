@@ -196,7 +196,6 @@ const extractPackagesFromLockfile = createLockfileExtractor(extracts, extractPac
  */
 function findCachedTarballByUrl(resolved) {
 	const npmCacheDir = join(homedir(), '.npm', '_cacache');
-	/* istanbul ignore next - defensive: npm cache directory usually exists */
 	if (!existsSync(npmCacheDir)) {
 		return null;
 	}
@@ -323,7 +322,7 @@ async function downloadTarball(resolvedUrl) {
  */
 function verifyIntegrityFromBuffer(tarball, integrity) {
 	const match = integrity.match(/^(sha\d+)-/);
-	/* istanbul ignore start - defensive: invalid integrity format already checked by rule */
+	/* istanbul ignore start - defensive: processPackage validates format before calling this function */
 	if (!match) {
 		return { valid: false, actual: '(invalid integrity format)' };
 	}
@@ -468,7 +467,6 @@ export default {
 
 			// Verify the integrity hash
 			const result = verifyIntegrityFromBuffer(tarball, integrity);
-			/* istanbul ignore start - requires package with incorrect integrity hash */
 			if (!result.valid) {
 				context.report({
 					node,
@@ -482,7 +480,6 @@ export default {
 					},
 				});
 			}
-			/* istanbul ignore stop */
 		}
 
 		/**
@@ -504,9 +501,7 @@ export default {
 					messageId: 'malformedLockfile',
 					data: {
 						filename,
-						/* istanbul ignore start - defensive: all real errors are Error instances */
 						error: e instanceof Error ? e.message : String(e),
-						/* istanbul ignore stop */
 					},
 				});
 				return Promise.resolve();

@@ -186,3 +186,32 @@ test('flavor rule - no config defaults to npm', async (t) => {
 	}
 	t.end();
 });
+
+test('flavor rule - context.getFilename() fallback when context.filename is undefined', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }));
+
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'var x = 1;');
+
+	const reports = [];
+	const context = {
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: [],
+		report(/** @type {object} */ info) { reports.push(info); },
+	};
+	// @ts-expect-error mock context
+	const ruleInstance = plugin.rules.flavor.create(context);
+	// @ts-expect-error mock node
+	// eslint-disable-next-line new-cap
+	ruleInstance.Program(/** @type {*} */ ({ type: 'Program' }));
+
+	t.equal(reports.length, 0, 'no errors when using getFilename() fallback');
+	t.end();
+});

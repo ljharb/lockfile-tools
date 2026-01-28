@@ -112,7 +112,6 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 			if (bins) {
 				return {
 					name: packageName,
-					/* istanbul ignore next - defensive: packages without version don't have bins */
 					version: pkg.version || 'unknown',
 					bins,
 					isDirect: directDeps.has(packageName),
@@ -133,15 +132,14 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 			const binPromises = entries(deps).map(async ([name, dep]) => {
 				const fullName = prefix ? `${prefix}/${name}` : name;
 				const packageName = name.includes('/') ? name.split('/').pop() : name;
-				/* istanbul ignore next - defensive: packageName is always defined from split().pop() */
+				/* istanbul ignore next - defensive: packageName is only falsy for names ending in '/' */
 				const bins = await fetchPackageBins(packageName || '', dep.version);
 				if (bins) {
 					return {
 						name: fullName,
-						/* istanbul ignore next - defensive: version is always present in npm lockfiles */
 						version: dep.version || 'unknown',
 						bins,
-						/* istanbul ignore next - defensive: packageName is always extracted from fullName */
+						/* istanbul ignore next - defensive: packageName is only falsy for names ending in '/' */
 						isDirect: directDeps.has(packageName || ''),
 						line: findJsonKeyLine(content, name),
 					};
@@ -155,7 +153,6 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 			// Recursively process nested dependencies
 			await Promise.all(entries(deps).map(async ([name, dep]) => {
 				if (dep.dependencies) {
-					/* istanbul ignore next - defensive: prefix is always truthy in recursive calls */
 					const fullName = prefix ? `${prefix}/${name}` : name;
 					await collectDeps(
 						/** @type {Record<string, {version: string; dependencies?: Record<string, unknown> }>} */ (dep.dependencies),
@@ -182,11 +179,9 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 		line,
 	}) => {
 		const nameMatch = name.match(/^(@?[^@]+)/);
-		/* istanbul ignore next - defensive: yarn package names always match this pattern */
 		const pkgName = nameMatch ? nameMatch[1] : name;
 		return {
 			name: pkgName,
-			/* istanbul ignore next - defensive: git packages may not have version field in yarn lockfiles */
 			version: (otherFields && otherFields.version) || 'unknown',
 			line,
 		};
@@ -208,9 +203,7 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 				line,
 			};
 		}
-		/* istanbul ignore start - defensive: packages without bins are filtered earlier */
 		return null;
-		/* istanbul ignore stop */
 	});
 
 	const results = await Promise.all(binPromises);
@@ -241,13 +234,12 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 			if (line.match(/^ {2}\S/) && line.includes(':')) {
 				if (currentPackage) {
 					const nameMatch = currentPackage.match(/^(@?[^@]+)/);
-					/* istanbul ignore next - defensive: pnpm package names always match this pattern */
+					/* istanbul ignore next - tested via esmock; defensive: only falsy for malformed pnpm keys */
 					const pkgName = nameMatch ? nameMatch[1] : currentPackage;
 					const versionMatch = currentPackage.match(/@([^@]+)$/);
 					packageList.push({
 						key: currentPackage,
 						name: pkgName,
-						/* istanbul ignore next - defensive: pnpm packages always have version in key */
 						version: versionMatch ? versionMatch[1] : 'unknown',
 						line: currentPackageLine,
 					});
@@ -260,13 +252,12 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 
 	if (currentPackage) {
 		const nameMatch = currentPackage.match(/^(@?[^@]+)/);
-		/* istanbul ignore next - defensive: pnpm package names always match this pattern */
+		/* istanbul ignore next - tested via esmock; defensive: only falsy for malformed pnpm keys */
 		const pkgName = nameMatch ? nameMatch[1] : currentPackage;
 		const versionMatch = currentPackage.match(/@([^@]+)$/);
 		packageList.push({
 			key: currentPackage,
 			name: pkgName,
-			/* istanbul ignore next - defensive: pnpm packages always have version in key */
 			version: versionMatch ? versionMatch[1] : 'unknown',
 			line: currentPackageLine,
 		});
@@ -309,11 +300,9 @@ async function extractPackageBinsFromBunLockfile(_content, _dir) {
 /** @type {(filepath: string, dir: string) => Promise<PackageBinInfo[]>} */
 async function extractPackageBinsFromBunLockbBinary(filepath, dir) {
 	const yarnLockContent = loadBunLockbContent(filepath);
-	/* istanbul ignore start - defensive: bun.lockb loading failures are rare */
 	if (!yarnLockContent) {
 		return [];
 	}
-	/* istanbul ignore stop */
 	return extractPackageBinsFromYarnLockfile(yarnLockContent, dir);
 }
 
@@ -459,6 +448,7 @@ export default {
 							// Use the first provider's line number for the error location (0 for virtual)
 							const firstLine = providers[0].line;
 							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							/* istanbul ignore next - tested via esmock; truthy branch requires binary conflict in real lockfile */
 							const loc = firstLine ? { start: { line: firstLine, column: 0 }, end: { line: firstLine, column: 0 } } : undefined;
 
 							if (directProviders.length === 1) {
@@ -518,9 +508,7 @@ export default {
 							messageId: 'malformedLockfile',
 							data: {
 								filename: lockfileName,
-								/* istanbul ignore start - defensive: all real errors are Error instances */
 								error: e instanceof Error ? e.message : String(e),
-								/* istanbul ignore stop */
 							},
 						});
 						// eslint-disable-next-line no-continue, no-restricted-syntax

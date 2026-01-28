@@ -149,3 +149,58 @@ test('buildVirtualLockfile - tree without edgesOut', async (t) => {
 	t.equal(packages[0].isDirect, false, 'package is not marked as direct (no edgesOut)');
 	t.end();
 });
+
+test('buildVirtualLockfile - node with falsy name, version, resolved, integrity (lines 56-57, 60)', async (t) => {
+	const mockInventory = new Map([
+		['falsy-node', {
+			isRoot: false,
+			name: '',
+			version: '',
+			resolved: '',
+			integrity: '',
+		}],
+		['undefined-node', {
+			isRoot: false,
+			name: undefined,
+			version: undefined,
+			resolved: undefined,
+			integrity: undefined,
+		}],
+	]);
+
+	const mockTree = {
+		isRoot: false,
+		edgesOut: new Map([
+			['real-pkg', {}],
+		]),
+		inventory: mockInventory,
+	};
+
+	class MockArborist {
+		constructor() {
+			this.path = '';
+		}
+
+		async loadVirtual() {
+			void this.path;
+			return mockTree;
+		}
+	}
+
+	const virtualLockfile = await esmock('lockfile-tools/virtual', {
+		[arboristPath]: { default: MockArborist },
+	});
+
+	const packages = await virtualLockfile.buildVirtualLockfile('/fake/path');
+
+	t.equal(packages.length, 2, 'returns 2 packages');
+
+	const unknowns = packages.filter(/** @param {{name?: string}} p */ (p) => p.name === 'unknown');
+	t.equal(unknowns.length, 2, 'both falsy names fall back to unknown');
+	t.equal(unknowns[0].version, 'unknown', 'falsy version falls back to unknown');
+	t.equal(unknowns[0].resolved, null, 'falsy resolved falls back to null');
+	t.equal(unknowns[0].integrity, null, 'falsy integrity falls back to null');
+	t.equal(unknowns[0].isDirect, false, 'falsy name is not a direct dep');
+
+	t.end();
+});

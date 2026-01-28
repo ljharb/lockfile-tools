@@ -2,6 +2,7 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
@@ -105,6 +106,91 @@ test('version rule - array of allowed versions with wrong version', async (t) =>
 	} finally {
 		rmSync(tmpDir, { recursive: true, force: true });
 	}
+
+	t.end();
+});
+
+/**
+ * @param {import('eslint').Rule.RuleModule} rule
+ * @param {string} testFile
+ * @param {object} [options]
+ * @returns {{ messageId?: string; data?: Record<string, unknown> }[]}
+ */
+function runRule(rule, testFile, options) {
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: options ? [options] : [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) { reports.push(info); },
+	};
+	// @ts-expect-error mock context
+	const ruleInstance = rule.create(context);
+	// @ts-expect-error mock node
+	// eslint-disable-next-line new-cap
+	ruleInstance.Program(/** @type {*} */ ({ type: 'Program' }));
+	return reports;
+}
+
+test('version rule - bun.lockb content without yarn v1 header returns null', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'bun.lockb'), 'binary content');
+	writeFileSync(join(tmpDir, 'index.js'), 'var x = 1;');
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/version.mjs', {}, {
+		'lockfile-tools/io': {
+			loadLockfileContent() { return null; },
+			loadBunLockbContent() { return 'some content without the v1 header'; },
+		},
+	});
+
+	const reports = runRule(rule.default, join(tmpDir, 'index.js'), { bun: 0 });
+
+	t.ok(
+		reports.every((r) => r.messageId !== 'wrongVersion' || !String(r.data?.filename).includes('bun.lockb')),
+		'no wrongVersion error for bun.lockb when content lacks v1 header',
+	);
+
+	t.end();
+});
+
+test('version rule - malformed lockfile with non-Error thrown value', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => {
+		rmSync(tmpDir, { recursive: true, force: true });
+	});
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'index.js'), 'var x = 1;');
+
+	const rule = await esmock('eslint-plugin-lockfile/rules/version.mjs', {}, {
+		'lockfile-tools/io': {
+			loadLockfileContent(/** @type {string} */ filepath) {
+				if (filepath.includes('package-lock.json')) {
+					throw 'string error'; // eslint-disable-line no-throw-literal
+				}
+				return null;
+			},
+			loadBunLockbContent() { return null; },
+		},
+	});
+
+	const reports = runRule(rule.default, join(tmpDir, 'index.js'));
+
+	const malformedReports = reports.filter((r) => r.messageId === 'malformedLockfile');
+	t.ok(malformedReports.length > 0, 'reports malformedLockfile for non-Error thrown value');
+	t.equal(
+		malformedReports[0].data?.error,
+		'string error',
+		'uses String(e) for non-Error thrown values',
+	);
 
 	t.end();
 });

@@ -2,8 +2,29 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
+
+/** @type {(rule: { default?: import('eslint').Rule.RuleModule, create?: Function }, testFile: string, options?: unknown[]) => Promise<{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]>} */
+async function runRule(rule, testFile, options) {
+	/** @type {{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]} */
+	const reports = [];
+	const ruleModule = rule.default || rule;
+	const context = {
+		filename: testFile,
+		options: options || [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }} info */
+		report(info) {
+			reports.push(info);
+		},
+	};
+	// @ts-expect-error mock context
+	const ruleInstance = ruleModule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+	return reports;
+}
 
 test('non-registry-specifiers rule - package without resolved URL is skipped', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
@@ -200,5 +221,363 @@ test('non-registry-specifiers rule - skips workspace packages with link: true', 
 	const results = await eslint.lintFiles(['index.js']);
 	// Workspace packages should be skipped - their local path resolved is not a non-registry specifier
 	t.equal(results[0].errorCount, 0, 'no errors - workspace packages skipped');
+	t.end();
+});
+
+test('non-registry-specifiers - getNonRegistryType returns tarball URL for non-registry https URL', async (t) => {
+	// Covers line 78-79: URL starts with https:// but has no /-/ separator, and doesn't match git/github/file patterns
+	// This falls through to the 'tarball URL' return
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-tarball': '1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/my-tarball': {
+				version: '1.0.0',
+				resolved: 'https://example.com/package.tgz',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/non-registry-specifiers': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results[0].errorCount > 0, 'error reported for tarball URL');
+	t.ok(
+		results[0].messages.some((m) => m.message.includes('tarball URL')),
+		'error message mentions tarball URL type',
+	);
+	t.end();
+});
+
+test('non-registry-specifiers - getNonRegistryType fallback to non-registry specifier (line 81)', async (t) => {
+	// Covers line 81: URL that doesn't match any specific pattern and is not http/https
+	// A non-http, non-git, non-github, non-file URL falls through all checks to line 81
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'my-pkg': '1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/my-pkg': {
+				version: '1.0.0',
+				resolved: 'ssh://git@private.example.com/repo.git#abc123',
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/non-registry-specifiers': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.ok(results[0].errorCount > 0, 'error reported for non-registry specifier');
+	t.ok(
+		results[0].messages.some((m) => m.message.includes('non-registry specifier')),
+		'error message mentions non-registry specifier type',
+	);
+	t.end();
+});
+
+test('non-registry-specifiers - npm v1 lockfile dep with non-string resolved (line 111)', async (t) => {
+	// Covers line 111-112: dep.resolved exists but is not a string (e.g., number or boolean)
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'some-package': '1.0.0',
+		},
+	}));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 1,
+		dependencies: {
+			'some-package': {
+				version: '1.0.0',
+				resolved: 12345,
+			},
+		},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/non-registry-specifiers': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	t.equal(results[0].errorCount, 0, 'no errors for dep with non-string resolved');
+	t.end();
+});
+
+test('non-registry-specifiers - bun.lock text format returns empty deps (line 150-153)', async (t) => {
+	// Covers extractDepsFromBunLockfile: bun.lock text format returns []
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'some-package': '^1.0.0',
+		},
+	}));
+	// bun.lock is a text-based lockfile format
+	writeFileSync(join(tmpDir, 'bun.lock'), JSON.stringify({
+		lockfileVersion: 0,
+		packages: {},
+	}));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const eslint = createESLint({
+		files: ['**/*.js'],
+		plugins: { lockfile: plugin },
+		rules: { 'lockfile/non-registry-specifiers': 'error' },
+	}, tmpDir);
+
+	const results = await eslint.lintFiles(['index.js']);
+	// bun.lock doesn't store resolved URLs, so no non-registry specifiers can be detected
+	t.equal(results[0].errorCount, 0, 'no errors for bun.lock text format');
+	t.end();
+});
+
+test('non-registry-specifiers - bun.lockb with null content returns empty deps (line 159)', async (t) => {
+	// Covers extractDepsFromBunLockbBinary: loadBunLockbContent returns null
+	const rule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {}, {
+		'lockfile-tools/io': {
+			loadBunLockbContent() { return null; },
+			findJsonKeyLine() { return 0; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'bun.lockb'), Buffer.from([0x00]));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.equal(reports.length, 0, 'no errors when bun.lockb content is null');
+	t.end();
+});
+
+test('non-registry-specifiers - context.getFilename() fallback (line 243)', async (t) => {
+	// Covers line 243: context.filename is undefined, falls back to context.getFilename()
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/some-pkg': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/some-pkg/-/some-pkg-1.0.0.tgz',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: undefined,
+		getFilename() { return testFile; },
+		options: [],
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) { reports.push(info); },
+	};
+	// @ts-expect-error mock context
+	const ruleInstance = plugin.rules['non-registry-specifiers'].create(context);
+	// @ts-expect-error mock node
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program(/** @type {*} */ ({ type: 'Program' }));
+
+	t.equal(reports.length, 0, 'no errors when using getFilename() fallback');
+	t.end();
+});
+
+test('non-registry-specifiers - virtual lockfile with registry URL is not reported (line 278 false branch)', async (t) => {
+	// Covers line 274/278: virtual lockfile where resolved IS a registry URL (isRegistryUrl returns true)
+	const nonRegistryRule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {
+		'lockfile-tools/virtual': {
+			hasLockfile: () => false,
+			buildVirtualLockfile: async () => [
+				{
+					name: 'some-pkg',
+					version: '1.0.0',
+					resolved: 'https://registry.npmjs.org/some-pkg/-/some-pkg-1.0.0.tgz',
+					integrity: 'sha512-abc',
+					isDirect: true,
+				},
+			],
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({
+		name: 'test',
+		dependencies: {
+			'some-pkg': '^1.0.0',
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	const reports = await runRule(nonRegistryRule, testFile);
+
+	t.equal(reports.length, 0, 'no errors for virtual lockfile with registry URL');
+	t.end();
+});
+
+test('non-registry-specifiers - malformed lockfile with non-Error thrown (line 311)', async (t) => {
+	// Covers line 311: e instanceof Error ? e.message : String(e) where e is not an Error
+	const rule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {}, {
+		'lockfile-tools/parsers': {
+			parseYarnLockfile: () => [],
+			parsePnpmLockfile: () => [],
+			createLockfileExtractor() {
+				return () => {
+					throw 'string error'; // eslint-disable-line no-throw-literal
+				};
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }));
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.ok(
+		reports.some((r) => r.messageId === 'malformedLockfile'),
+		'reports malformedLockfile error',
+	);
+	t.ok(
+		reports.some((r) => r.data?.error === 'string error'),
+		'uses String(e) for non-Error thrown values',
+	);
+	t.end();
+});
+
+test('non-registry-specifiers - lockfile dep without resolved URL is skipped (line 320-321)', async (t) => {
+	// Covers lines 320-321: dep with falsy resolved value in lockfile deps processing
+	// This is different from the v3 packages test - this tests the deps.forEach path at line 317
+	const rule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {}, {
+		'lockfile-tools/parsers': {
+			parseYarnLockfile: () => [],
+			parsePnpmLockfile: () => [],
+			createLockfileExtractor() {
+				return () => [
+					{
+						name: 'no-resolved-pkg',
+						resolved: null,
+						line: 1,
+					},
+				];
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }));
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.equal(reports.length, 0, 'no errors when dep has no resolved URL');
+	t.end();
+});
+
+test('non-registry-specifiers - bun.lockb with actual yarn lock content (line 162)', async (t) => {
+	// Covers line 162: extractDepsFromBunLockbBinary returns actual data from bun.lockb content
+	const yarnContent = 'tape@^5.0.0:\n  version "5.7.5"\n  resolved "https://registry.yarnpkg.com/tape/-/tape-5.7.5.tgz#abc123"\n  integrity sha512-xxx\n';
+	const rule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {}, {
+		'lockfile-tools/io': {
+			loadBunLockbContent() { return yarnContent; },
+			findJsonKeyLine() { return 0; },
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'bun.lockb'), Buffer.from([0x00]));
+	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	// The yarn content has a valid registry URL, so no errors
+	t.equal(reports.length, 0, 'no errors when bun.lockb returns valid registry content');
+	t.end();
+});
+
+test('non-registry-specifiers - malformed lockfile with Error instance (line 311 Error branch)', async (t) => {
+	// Covers line 311: e instanceof Error ? e.message : String(e) where e IS an Error
+	const rule = await esmock('eslint-plugin-lockfile/rules/non-registry-specifiers.mjs', {}, {
+		'lockfile-tools/parsers': {
+			parseYarnLockfile: () => [],
+			parsePnpmLockfile: () => [],
+			createLockfileExtractor() {
+				return () => {
+					throw new Error('parse failure');
+				};
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }));
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.ok(
+		reports.some((r) => r.messageId === 'malformedLockfile'),
+		'reports malformedLockfile error',
+	);
+	t.ok(
+		reports.some((r) => r.data?.error === 'parse failure'),
+		'uses e.message for Error instances',
+	);
 	t.end();
 });

@@ -57,7 +57,6 @@ function getLockfileVersion(filepath, manager) {
 		if (yarnLockContent.includes('# yarn lockfile v1')) {
 			return 0;
 		}
-		/* istanbul ignore next 2 - defensive: @hyrious/bun.lockb always produces yarn v1 format */
 		return null;
 	}
 	const content = loadLockfileContent(filepath);
@@ -96,9 +95,8 @@ function getLockfileVersion(filepath, manager) {
 		const parsed = JSON.parse(content);
 		return parsed.lockfileVersion || 0;
 	}
-	/* istanbul ignore start - defensive: all valid managers are handled above */
+	/* istanbul ignore next - all known managers are handled above */
 	throw new SyntaxError('should never reach here');
-	/* istanbul ignore stop */
 }
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -234,9 +232,7 @@ export default {
 								messageId: 'malformedLockfile',
 								data: {
 									filename: lockfileName,
-									/* istanbul ignore start - defensive: all real errors are Error instances */
 									error: e instanceof Error ? e.message : String(e),
-									/* istanbul ignore stop */
 								},
 							});
 							return;
