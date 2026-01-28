@@ -28,7 +28,6 @@
 		"@types/node": "^22.19.2",
 		"@types/pacote": "^11.1.8",
 		"eslint": "^8.8 || ^9.39.2",
-		"glob-gitignore": "^1.0.15",
 		"typescript": "next"
 	},
 	"devEngines": {

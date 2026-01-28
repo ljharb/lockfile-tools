@@ -12,6 +12,7 @@
 		"eslint.config.mjs",
 		"packages/tests",
 		"**/*.d.*ts",
-		"release.mjs"
+		"release.mjs",
+		"since.mjs"
 	]
 }
