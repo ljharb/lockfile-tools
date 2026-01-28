@@ -74,14 +74,18 @@ export default [
 
 <!-- begin auto-generated rules list -->
 
-| Name | Description |
-| :--- | :---------- |
-| [binary-conflicts](docs/rules/binary-conflicts.md) | Detect binary name conflicts between packages |
-| [flavor](docs/rules/flavor.md) | Enforce allowed lockfile formats |
-| [integrity](docs/rules/integrity.md) | Enforce integrity values in lockfiles |
-| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | Warn on dependencies from non-registry sources |
-| [registry](docs/rules/registry.md) | Enforce allowed registries in lockfiles |
-| [version](docs/rules/version.md) | Enforce lockfile version |
+💼 Configurations enabled in.\
+✅ Set in the `recommended` configuration.
+
+| Name                                                             | Description                                             | 💼                              |
+| :--------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------ |
+| [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages           | ✅ ![badge-recommended-legacy][] |
+| [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                        | ✅ ![badge-recommended-legacy][] |
+| [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                   | ✅ ![badge-recommended-legacy][] |
+| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources          | ✅ ![badge-recommended-legacy][] |
+| [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                 | ✅ ![badge-recommended-legacy][] |
+| [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json | ✅ ![badge-recommended-legacy][] |
+| [version](docs/rules/version.md)                                 | enforce lockfile version                                | ✅ ![badge-recommended-legacy][] |
 
 <!-- end auto-generated rules list -->
 

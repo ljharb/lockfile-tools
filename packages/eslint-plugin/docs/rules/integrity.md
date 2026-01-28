@@ -1,6 +1,6 @@
 # Enforce integrity values in lockfiles (`lockfile/integrity`)
 
-💼 This rule is enabled in the ✅ `recommended` config.
+💼 This rule is enabled in the following configs: ✅ `recommended`, `recommended-legacy`.
 
 <!-- end auto-generated rule header -->
 
