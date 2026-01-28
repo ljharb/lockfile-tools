@@ -3,6 +3,7 @@ import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
+import shrinkwrap from './rules/shrinkwrap.mjs';
 import versionRule from './rules/version.mjs';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 
@@ -24,6 +25,7 @@ const rules = {
 	integrity,
 	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
+	shrinkwrap,
 	version: versionRule,
 };
 
@@ -35,6 +37,7 @@ const recommendedRules = {
 		'lockfile/integrity': 'error',
 		'lockfile/non-registry-specifiers': 'error',
 		'lockfile/registry': 'error',
+		'lockfile/shrinkwrap': 'error',
 		'lockfile/version': 'error',
 	},
 };

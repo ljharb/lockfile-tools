@@ -28,12 +28,15 @@
 	"dependencies": {
 		"lockfile-tools": "^1.0.0",
 		"minimatch": "^10.1.1",
-		"pacote": "^21.0.4"
+		"npm-package-arg": "^13.0.2",
+		"pacote": "^21.0.4",
+		"semver": "^7.7.3"
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
 		"@eslint/core": "^1.0.0",
 		"@ljharb/tsconfig": "^0.3.2",
+		"@types/semver": "^7.7.1",
 		"auto-changelog": "^2.5.0",
 		"npmignore": "^0.3.4",
 		"typescript": "next"

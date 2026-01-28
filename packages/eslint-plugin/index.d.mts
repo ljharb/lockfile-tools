@@ -7,6 +7,7 @@ type RecommendedRules = {
     'lockfile/integrity': 'error',
     'lockfile/non-registry-specifiers': 'error',
     'lockfile/registry': 'error',
+    'lockfile/shrinkwrap': 'error',
     'lockfile/version': 'error',
 };
 
@@ -23,6 +24,7 @@ declare const config: Plugin & {
             | 'integrity'
             | 'non-registry-specifiers'
             | 'registry'
+            | 'shrinkwrap'
             | 'version'
         ]: Rule.RuleModule;
     };
