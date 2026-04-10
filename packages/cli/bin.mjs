@@ -172,6 +172,12 @@ export async function lintLockfile(lockfilePath, options = {}) {
 
 		const results = await eslint.lintFiles([lintTarget]);
 
+		if (eslintMajorVersion < 9) {
+			for (const result of results) {
+				result.filePath = targetLockfile;
+			}
+		}
+
 		const formatter = await eslint.loadFormatter('stylish');
 		const resultText = await formatter.format(results);
 
