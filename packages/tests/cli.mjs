@@ -131,6 +131,62 @@ test('CLI - lint valid npm lockfile', async (t) => {
 	t.end();
 });
 
+test('CLI - no temp .js file left behind', async (t) => {
+	const tempDir = join(__dirname, 'temp-cli-test-no-temp');
+	mkdirSync(tempDir, { recursive: true });
+
+	const lockfile = {
+		name: 'test-package',
+		version: '1.0.0',
+		lockfileVersion: 3,
+		requires: true,
+		packages: {},
+	};
+	writeFileSync(join(tempDir, 'package-lock.json'), JSON.stringify(lockfile, null, 2));
+	writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0' }));
+
+	try {
+		const result = await runCli([join(tempDir, 'package-lock.json')]);
+
+		t.equal(result.exitCode, 0, 'exits with code 0');
+
+		const { existsSync } = await import('fs');
+		t.notOk(existsSync(join(tempDir, 'eslint-lockfile-check.js')), 'no temp .js file left in directory');
+	} finally {
+		rmSync(tempDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
+test('CLI - lints lockfile directly without parsing error', async (t) => {
+	const tempDir = join(__dirname, 'temp-cli-test-parse');
+	mkdirSync(tempDir, { recursive: true });
+
+	const lockfile = {
+		name: 'test-package',
+		version: '1.0.0',
+		lockfileVersion: 3,
+		requires: true,
+		packages: {},
+	};
+	writeFileSync(join(tempDir, 'package-lock.json'), JSON.stringify(lockfile, null, 2));
+	writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0' }));
+
+	try {
+		const result = await runCli([join(tempDir, 'package-lock.json')]);
+		const output = result.stdout + result.stderr;
+
+		t.equal(result.exitCode, 0, 'exits with code 0');
+		t.notOk(output.includes('Parsing error'), 'no parsing error on JSON lockfile');
+		t.notOk(output.includes('Unexpected token'), 'no unexpected token error');
+	} finally {
+		rmSync(tempDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
 test('CLI - flavor option validation', async (t) => {
 	const result = await runCli(['-f', 'invalid-pm', '--help']);
 	const output = result.stdout + result.stderr;

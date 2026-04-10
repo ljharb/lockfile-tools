@@ -109,12 +109,10 @@ export async function lintLockfile(lockfilePath, options = {}) {
 	console.log(`Linting lockfile: ${lockfileName}`);
 	console.log(`Directory: ${targetDir}`);
 
-	const tempFile = join(targetDir, 'eslint-lockfile-check.js');
-	const tempFileCreated = !existsSync(tempFile);
-
-	if (tempFileCreated) {
-		writeFileSync(tempFile, '// Temporary file for eslint-plugin-lockfile\n');
-	}
+	/** @type {string} */
+	let lintTarget = '';
+	/** @type {boolean} */
+	let tempFileCreated = false;
 
 	try {
 		const rules = configureRules(options, detectedFlavor);
@@ -123,17 +121,39 @@ export async function lintLockfile(lockfilePath, options = {}) {
 		let eslintOptions;
 		if (eslintMajorVersion >= 9) {
 			// ESLint 9+ uses flat config
+			lintTarget = targetLockfile;
 			eslintOptions = {
 				overrideConfigFile: true,
 				overrideConfig: {
-					files: ['**/*.js'],
+					files: LOCKFILE_NAMES.map((name) => `**/${name}`),
 					plugins: { lockfile: plugin },
+					languageOptions: {
+						parser: {
+							parse() {
+								return {
+									type: 'Program',
+									body: [],
+									sourceType: 'module',
+									tokens: [],
+									comments: [],
+									loc: { start: { line: 1, column: 0 }, end: { line: 1, column: 0 } },
+									range: [0, 0],
+								};
+							},
+						},
+					},
 					rules,
 				},
 				cwd: targetDir,
 			};
 		} else {
 			// ESLint 8 uses legacy config
+			lintTarget = join(targetDir, 'eslint-lockfile-check.js');
+			tempFileCreated = !existsSync(lintTarget);
+
+			if (tempFileCreated) {
+				writeFileSync(lintTarget, '// Temporary file for eslint-plugin-lockfile\n');
+			}
 			eslintOptions = /** @type {import('eslint').ESLint.Options} */ ({
 				useEslintrc: false,
 				plugins: { lockfile: plugin },
@@ -150,11 +170,7 @@ export async function lintLockfile(lockfilePath, options = {}) {
 
 		const eslint = new ESLint(eslintOptions);
 
-		const results = await eslint.lintFiles([tempFile]);
-
-		for (const result of results) {
-			result.filePath = targetLockfile;
-		}
+		const results = await eslint.lintFiles([lintTarget]);
 
 		const formatter = await eslint.loadFormatter('stylish');
 		const resultText = await formatter.format(results);
@@ -182,8 +198,8 @@ export async function lintLockfile(lockfilePath, options = {}) {
 		console.error('Error linting lockfile:', /** @type {Error} */ (error).message);
 		return 1;
 	} finally {
-		if (tempFileCreated && existsSync(tempFile)) {
-			rmSync(tempFile);
+		if (tempFileCreated && existsSync(lintTarget)) {
+			rmSync(lintTarget);
 		}
 	}
 }
