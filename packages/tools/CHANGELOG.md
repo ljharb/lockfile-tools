@@ -5,10 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.1...1.0.2)
+
+### Commits
+
+- [*] [tests] increase coverage [`abd6a7f`](https://github.com/ljharb/lockfile-tools/commit/abd6a7f412bc34fe0cbb2d043389bd04b75e7e0f)
+- [plugin, tools] [refactor] use arborist’s .forEach [`cf7b30e`](https://github.com/ljharb/lockfile-tools/commit/cf7b30e79fc9b014cd9d02e1f35b830307acf20d)
+- [*] [dev deps] update `@types/npmcli__arborist`, `@eslint/core`, `npmignore` [`ae9ccf7`](https://github.com/ljharb/lockfile-tools/commit/ae9ccf7a1e1bd65d0a039b7fc2b755f3fe4fad2b)
+- [tools] [meta] fix changelog [`f602276`](https://github.com/ljharb/lockfile-tools/commit/f60227663e048825ec6c0d58a86c5c2ae6568e8f)
+- [tools] [deps] update `@npmcli/arborist` [`4013e10`](https://github.com/ljharb/lockfile-tools/commit/4013e10807766920378056c3010353ce06098af9)
+
 ## [lockfile-tools@1.0.1](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.0...lockfile-tools@1.0.1) - 2026-01-08
 
 ### Commits
 
+- [tools] v1.0.1 [`c252c66`](https://github.com/ljharb/lockfile-tools/commit/c252c66e42757e5690d09b3fcada80ecb70e27a7)
 - [plugin] [fix] `registry` rule: don't check non-registry URLs (git+ssh, git+https, file, etc.) [`091d85b`](https://github.com/ljharb/lockfile-tools/commit/091d85b267a722bc957186c21f006f8d8d6c2b34)
 
 ## lockfile-tools@1.0.0 - 2025-12-21
