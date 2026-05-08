@@ -35,11 +35,11 @@
 	},
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.18.2",
-		"@eslint/core": "^1.0.1",
+		"@eslint/core": "^1.2.1",
 		"@ljharb/tsconfig": "^0.3.2",
 		"@types/semver": "^7.7.1",
-		"auto-changelog": "^2.5.0",
-		"eslint-doc-generator": "^2.1.2",
+		"auto-changelog": "^2.5.1",
+		"eslint-doc-generator": "^2.4.0",
 		"npmignore": "^0.3.5",
 		"typescript": "next"
 	},
