@@ -168,9 +168,10 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
  * @template T
  * @param {Object.<Lockfile, (content: string, ...args: unknown[]) => T>} extractors - Map of lockfile names to extractor functions
  * @param {((filepath: string, ...args: unknown[]) => T) | null} [bunLockbExtractor] - Special extractor for binary bun.lockb
+ * @param {(filepath: string) => string | null} [getContent] - Optional content loader; defaults to reading from disk
  * @returns {(filepath: string, ...args: unknown[]) => T}
  */
-export function createLockfileExtractor(extractors, bunLockbExtractor = null) {
+export function createLockfileExtractor(extractors, bunLockbExtractor = null, getContent = loadLockfileContent) {
 	return function (filepath, ...args) {
 		const filename = getLockfileName(filepath);
 
@@ -179,7 +180,7 @@ export function createLockfileExtractor(extractors, bunLockbExtractor = null) {
 			return bunLockbExtractor(filepath, ...args);
 		}
 
-		const content = loadLockfileContent(filepath);
+		const content = getContent(filepath);
 		if (!content) {
 			return /** @type {T} */ ([]);
 		}
