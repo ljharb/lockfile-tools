@@ -73,6 +73,48 @@ test('version rule - prefers piped content over on-disk version', async (t) => {
 	t.end();
 });
 
+test('integrity rule - preserves internal node_modules/ for nested deps', async (t) => {
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+
+	try {
+		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+
+		const eslint = createESLint({
+			...plugin.configs.recommended,
+			plugins: { lockfile: plugin },
+			rules: {
+				'lockfile/integrity': 'error',
+			},
+		}, tmpDir);
+
+		const piped = JSON.stringify({
+			name: 'test',
+			lockfileVersion: 3,
+			packages: {
+				'': { name: 'test', version: '1.0.0' },
+				'node_modules/@scope/parent/node_modules/nested-pkg': { version: '1.0.0' },
+			},
+		});
+		const results = await eslint.lintText(piped, {
+			filePath: join(tmpDir, 'package-lock.json'),
+		});
+
+		const integrityMsgs = results[0].messages.filter((m) => m.ruleId === 'lockfile/integrity');
+		t.ok(
+			integrityMsgs.some((m) => m.message.includes('@scope/parent/node_modules/nested-pkg')),
+			'preserves internal node_modules/ to keep nested-dependency context',
+		);
+		t.notOk(
+			integrityMsgs.some((m) => m.message.includes('node_modules/@scope/parent/node_modules/nested-pkg')),
+			'still strips the leading node_modules/',
+		);
+	} finally {
+		rmSync(tmpDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
 test('integrity rule - reads piped lockfile content via lintText', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
@@ -106,6 +148,11 @@ test('integrity rule - reads piped lockfile content via lintText', async (t) => 
 		t.ok(
 			integrityMsgs.some((m) => m.message.includes('missing-pkg')),
 			'reports the package from piped content',
+		);
+		// Package name should not include the leading `node_modules/` prefix
+		t.notOk(
+			integrityMsgs.some((m) => m.message.includes('node_modules/missing-pkg')),
+			'leading node_modules/ is stripped from reported package name',
 		);
 	} finally {
 		rmSync(tmpDir, { recursive: true, force: true });

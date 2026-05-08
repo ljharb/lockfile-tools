@@ -1,6 +1,20 @@
 import { basename } from 'path';
 
 /**
+ * Strips the leading `node_modules/` from an npm v2/v3 lockfile package key,
+ * so error messages display `@scope/pkg` instead of `node_modules/@scope/pkg`.
+ * Internal `node_modules/` segments are preserved to keep nested-dependency
+ * context visible (e.g. `@babel/core/node_modules/semver`).
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+export function stripNodeModulesPrefix(key) {
+	const prefix = 'node_modules/';
+	return key.startsWith(prefix) ? key.slice(prefix.length) : key;
+}
+
+/**
  * Builds a loader that returns the content of a given lockfile path,
  * preferring `sourceCode.text` when the path matches the file currently
  * being linted (so piped/in-memory content is honored), falling back to

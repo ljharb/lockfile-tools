@@ -17,7 +17,7 @@ import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
-import { makeLockfileContentLoader } from '../utils.mjs';
+import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
 
 const { values } = Object;
 const { parse } = JSON;
@@ -100,7 +100,7 @@ function extractDepsFromNpmLockfile(content) {
 			}
 			if (pkg.resolved && typeof pkg.resolved === 'string') {
 				deps.push({
-					name: key,
+					name: stripNodeModulesPrefix(key),
 					resolved: pkg.resolved,
 					line: findJsonKeyLine(content, key),
 				});

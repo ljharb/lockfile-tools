@@ -13,7 +13,7 @@ import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
-import { makeLockfileContentLoader } from '../utils.mjs';
+import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
 
 const { entries, values } = Object;
 const { isArray } = Array;
@@ -47,7 +47,7 @@ function extractPackagesFromNpmLockfile(content) {
 				return;
 			}
 			packages[packages.length] = {
-				name: key,
+				name: stripNodeModulesPrefix(key),
 				integrity: pkg.integrity || null,
 				resolved: pkg.resolved || null,
 				line: findJsonKeyLine(content, key),
