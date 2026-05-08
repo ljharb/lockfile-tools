@@ -27,4 +27,10 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 			'no-negated-condition': 'warn',
 		},
 	},
+	{
+		files: ['packages/tests/**'],
+		rules: {
+			'max-statements-per-line': 'off',
+		},
+	},
 ]);

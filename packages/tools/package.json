@@ -8,6 +8,7 @@
 		"./virtual": "./virtual.mjs",
 		"./parsers": "./parsers.mjs",
 		"./io": "./io.mjs",
+		"./json-ast": "./json-ast.mjs",
 		"./npm": "./npm.mjs",
 		"./lib/*": "./lib/*",
 		"./package.json": "./package.json"
@@ -38,6 +39,7 @@
 	},
 	"homepage": "https://github.com/ljharb/lockfile-tools#readme",
 	"dependencies": {
+		"@humanwhocodes/momoa": "^3.3.10",
 		"@hyrious/bun.lockb": "^0.0.4",
 		"@npmcli/arborist": "^9.1.10"
 	},
