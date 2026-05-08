@@ -18,6 +18,30 @@ const ALL_LOCKFILES = values(PACKAGE_MANAGERS).flatMap((pm) => pm.lockfiles);
 /** @type {string[]} */
 const LOCKFILE_GLOBS = ALL_LOCKFILES.map((name) => `**/${name}`);
 
+// Lockfiles aren't JavaScript (JSON, YAML, yarn-lock, binary), so the default
+// parser fails on them. Each rule only listens to `Program` to trigger once
+// per file and reads the file from disk itself, so an empty AST suffices.
+/** @type {import('eslint').Linter.Parser} */
+const noopParser = {
+	meta: { name: 'eslint-plugin-lockfile/noop-parser', version },
+	parseForESLint() {
+		return {
+			ast: {
+				type: 'Program',
+				body: [],
+				sourceType: 'script',
+				tokens: [],
+				comments: [],
+				loc: {
+					start: { line: 1, column: 0 },
+					end: { line: 1, column: 0 },
+				},
+				range: [0, 0],
+			},
+		};
+	},
+};
+
 /** @type {Record<string, import('eslint').Rule.RuleModule>} */
 const rules = {
 	'binary-conflicts': binaryConflicts,
@@ -53,6 +77,9 @@ export default {
 		// flat config (eslint >= 9)
 		recommended: {
 			files: LOCKFILE_GLOBS,
+			languageOptions: {
+				parser: noopParser,
+			},
 			...recommendedRules,
 		},
 		// legacy config (eslint 8)
