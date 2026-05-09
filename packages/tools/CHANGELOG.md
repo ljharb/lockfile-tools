@@ -5,10 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.1...1.0.2)
+## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...1.1.0)
 
 ### Commits
 
+- [tools] [new] add JSON AST helpers and AST-based npm walkers [`5678b75`](https://github.com/ljharb/lockfile-tools/commit/5678b75cfd7bd494eb6bbc4dadb3508521694885)
+- [tools] [dev deps] update `@types/npmcli__arborist`, `auto-changelog`, `eslint` [`98363c9`](https://github.com/ljharb/lockfile-tools/commit/98363c9118c517f7f3d49851dee56d382362ab5a)
+- [tools] [new] add optional content loader to `createLockfileExtractor` [`5d31b1e`](https://github.com/ljharb/lockfile-tools/commit/5d31b1e9a1817fd27c6eb1afa9d6bd7e08655d20)
+
+## [lockfile-tools@1.0.2](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.1...lockfile-tools@1.0.2) - 2026-04-12
+
+### Commits
+
+- [tools] v1.0.2 [`baa506e`](https://github.com/ljharb/lockfile-tools/commit/baa506eb846f06738ff520c2d8f38c707a82259b)
 - [*] [tests] increase coverage [`abd6a7f`](https://github.com/ljharb/lockfile-tools/commit/abd6a7f412bc34fe0cbb2d043389bd04b75e7e0f)
 - [plugin, tools] [refactor] use arborist’s .forEach [`cf7b30e`](https://github.com/ljharb/lockfile-tools/commit/cf7b30e79fc9b014cd9d02e1f35b830307acf20d)
 - [*] [dev deps] update `@types/npmcli__arborist`, `@eslint/core`, `npmignore` [`ae9ccf7`](https://github.com/ljharb/lockfile-tools/commit/ae9ccf7a1e1bd65d0a039b7fc2b755f3fe4fad2b)
