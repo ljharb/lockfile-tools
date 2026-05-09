@@ -16,12 +16,14 @@ import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
+import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { values, entries } = Object;
+const { isArray } = Array;
 const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
@@ -317,7 +319,7 @@ async function extractPackageBinsFromVltLockfile(content, dir) {
 	// vlt format: nodes object with arrays [version, name, integrity]
 	if (parsed.nodes) {
 		const binPromises = entries(parsed.nodes).map(async ([key, node]) => {
-			if (Array.isArray(node) && node.length >= 2) {
+			if (isArray(node) && node.length >= 2) {
 				const [version, name] = node;
 				const bins = await fetchPackageBins(name, String(version));
 				if (bins) {
@@ -352,12 +354,6 @@ const extracts = {
 	'bun.lockb': extractPackageBinsFromBunLockfile,
 	'vlt-lock.json': extractPackageBinsFromVltLockfile,
 };
-
-/** @type {(filepath: string, dir: string) => Promise<PackageBinInfo[]>} */
-const extractPackageBinsFromLockfile = createLockfileExtractor(
-	extracts,
-	/** @type {(filepath: string, ...args: unknown[]) => Promise<PackageBinInfo[]>} */ (extractPackageBinsFromBunLockbBinary),
-);
 
 /**
  * Extract package bins from virtual lockfile packages
@@ -419,6 +415,12 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
+				/** @type {(filepath: string, dir: string) => Promise<PackageBinInfo[]>} */
+				const extractPackageBinsFromLockfile = createLockfileExtractor(
+					extracts,
+					/** @type {(filepath: string, ...args: unknown[]) => Promise<PackageBinInfo[]>} */ (extractPackageBinsFromBunLockbBinary),
+					makeLockfileContentLoader(context, loadLockfileContent),
+				);
 
 				// Check if any lockfile exists
 				const lockfileExists = hasLockfile(dir);

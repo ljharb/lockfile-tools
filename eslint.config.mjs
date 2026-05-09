@@ -10,6 +10,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 			'max-len': 'off',
 			'max-lines-per-function': 'off',
 			'max-lines': 'off',
+			'max-params': ['error', { max: 4 }],
 			'max-statements': 'off',
 			'multiline-comment-style': 'off',
 			'no-extra-parens': 'off',

@@ -13,10 +13,11 @@ import npa from 'npm-package-arg';
 import pacote from 'pacote';
 import { satisfies } from 'semver';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
+import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { values, entries } = Object;
 const { isArray } = Array;
@@ -265,9 +266,6 @@ const extracts = {
 	'vlt-lock.json': extractPackagesFromVltLockfile,
 };
 
-/** @type {(filepath: string) => PackageEntry[]} */
-const extractPackagesFromLockfile = createLockfileExtractor(extracts, extractPackagesFromBunLockbBinary);
-
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
 	meta: {
@@ -360,6 +358,11 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
+				const extractPackagesFromLockfile = createLockfileExtractor(
+					extracts,
+					extractPackagesFromBunLockbBinary,
+					makeLockfileContentLoader(context, loadLockfileContent),
+				);
 
 				// Check if any lockfile exists
 				const lockfileExists = hasLockfile(dir);

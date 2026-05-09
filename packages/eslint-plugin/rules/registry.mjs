@@ -11,6 +11,7 @@ import { execSync } from 'child_process';
 import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent, getLockfileName, findJsonKeyLine } from 'lockfile-tools/io';
+import { makeLockfileContentLoader } from '../utils.mjs';
 import { traverseDependencies, extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile } from 'lockfile-tools/parsers';
 import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/registry';
@@ -166,8 +167,8 @@ const extracts = {
 	'vlt-lock.json': extractRegistriesFromVltLockfile,
 };
 
-/** @type {(filepath: string) => RegistryWithLine[]} */
-function extractRegistriesFromLockfile(filepath) {
+/** @type {(filepath: string, getContent: (filepath: string) => string | null) => RegistryWithLine[]} */
+function extractRegistriesFromLockfile(filepath, getContent) {
 	const filename = getLockfileName(filepath);
 
 	// Handle binary bun.lockb format specially
@@ -175,7 +176,7 @@ function extractRegistriesFromLockfile(filepath) {
 		return extractRegistriesFromBunLockbBinary(filepath);
 	}
 
-	const content = loadLockfileContent(filepath);
+	const content = getContent(filepath);
 	if (!content) {
 		return [];
 	}
@@ -286,8 +287,8 @@ function extractPackageRegistriesFromPnpmLockfile(content) {
 	return packages;
 }
 
-/** @type {(filepath: string) => PackageRegistry[]} */
-function extractPackageRegistriesFromLockfile(filepath) {
+/** @type {(filepath: string, getContent: (filepath: string) => string | null) => PackageRegistry[]} */
+function extractPackageRegistriesFromLockfile(filepath, getContent) {
 	const filename = getLockfileName(filepath);
 
 	// skip binary bun.lockb format
@@ -295,7 +296,7 @@ function extractPackageRegistriesFromLockfile(filepath) {
 		return [];
 	}
 
-	const content = loadLockfileContent(filepath);
+	const content = getContent(filepath);
 	if (!content) {
 		return [];
 	}
@@ -422,6 +423,7 @@ export default {
 					// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 					const filename = context.filename ?? context.getFilename();
 					const dir = dirname(filename);
+					const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 
 					// Check if any lockfile exists
 					const lockfileExists = hasLockfile(dir);
@@ -511,7 +513,7 @@ export default {
 						/** @type {PackageRegistry[]} */
 						let packages;
 						try {
-							packages = extractPackageRegistriesFromLockfile(lockfilePath);
+							packages = extractPackageRegistriesFromLockfile(lockfilePath, getContent);
 						} catch (e) {
 							context.report({
 								node,
@@ -603,6 +605,7 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
+				const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 
 				// Check if any lockfile exists
 				const lockfileExists = hasLockfile(dir);
@@ -646,7 +649,7 @@ export default {
 					/** @type {RegistryWithLine[]} */
 					let registries;
 					try {
-						registries = extractRegistriesFromLockfile(lockfilePath);
+						registries = extractRegistriesFromLockfile(lockfilePath, getContent);
 					} catch (e) {
 						// Malformed lockfile - report error
 						context.report({

@@ -12,11 +12,12 @@ The rule also warns on non-HTTPS registry URLs as they are insecure.
 
 import { dirname, join } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
+import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { values } = Object;
 const { parse } = JSON;
@@ -184,9 +185,6 @@ const extracts = {
 	'vlt-lock.json': extractDepsFromVltLockfile,
 };
 
-/** @type {(filepath: string) => DependencyInfo[]} */
-const extractDepsFromLockfile = createLockfileExtractor(extracts, extractDepsFromBunLockbBinary);
-
 /** @type {import('eslint').Rule.RuleModule} */
 export default {
 	meta: {
@@ -239,6 +237,11 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
+				const extractDepsFromLockfile = createLockfileExtractor(
+					extracts,
+					extractDepsFromBunLockbBinary,
+					makeLockfileContentLoader(context, loadLockfileContent),
+				);
 
 				// Check if any lockfile exists
 				const lockfileExists = hasLockfile(dir);

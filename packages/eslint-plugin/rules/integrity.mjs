@@ -10,9 +10,10 @@ import { readFileSync, existsSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
 import { traverseDependencies } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
+import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { entries, values } = Object;
 const { isArray } = Array;
@@ -185,9 +186,6 @@ const extracts = /** @type {{ [k in Lockfile]: (s: string) => PackageInfo[] }} *
 	'bun.lockb': extractPackagesFromBunLockfile,
 	'vlt-lock.json': extractPackagesFromVltLockfile,
 });
-
-/** @type {(filepath: string) => PackageInfo[]} */
-const extractPackagesFromLockfile = createLockfileExtractor(extracts, extractPackagesFromBunLockbBinary);
 
 /**
  * Attempts to find and read a tarball from npm's cache using the resolved URL
@@ -485,11 +483,12 @@ export default {
 		/**
 		 * Process a single lockfile and report any issues
 		 * @param {import('estree').Node} node
+		 * @param {(filepath: string) => PackageInfo[]} extractPackagesFromLockfile
 		 * @param {string} dir
 		 * @param {string} filename
 		 * @returns {Promise<void>}
 		 */
-		function processLockfile(node, dir, filename) {
+		function processLockfile(node, extractPackagesFromLockfile, dir, filename) {
 			/** @type {PackageInfo[]} */
 			let packages;
 			try {
@@ -539,9 +538,14 @@ export default {
 			Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const dir = dirname(context.filename ?? context.getFilename());
+				const extractPackagesFromLockfile = createLockfileExtractor(
+					extracts,
+					extractPackagesFromBunLockbBinary,
+					makeLockfileContentLoader(context, loadLockfileContent),
+				);
 
 				// Return the combined promise for ESLint to wait on
-				return Promise.all(lockfiles.map((filename) => processLockfile(node, dir, filename)));
+				return Promise.all(lockfiles.map((filename) => processLockfile(node, extractPackagesFromLockfile, dir, filename)));
 			},
 		};
 	},

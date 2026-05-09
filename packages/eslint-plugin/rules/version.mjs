@@ -12,10 +12,12 @@ I don't know off the top of my head what the other package managers have for ver
 import { dirname, join } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import { makeLockfileContentLoader } from '../utils.mjs';
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PackageManager */
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
+const { isArray } = Array;
 const { parse } = JSON;
 
 /** @type {{ [K in PackageManager]: { files: readonly Lockfile[], validVersions: readonly string[] | readonly number[], defaultVersion: string | number } }} */
@@ -47,8 +49,8 @@ const LOCKFILE_VERSIONS = /** @const @type {const} */ ({
 	},
 });
 
-/** @type {(filepath: string, manager: PackageManager) => null | (typeof LOCKFILE_VERSIONS[manager])['validVersions'][number]} */
-function getLockfileVersion(filepath, manager) {
+/** @type {(filepath: string, manager: PackageManager, getContent: (filepath: string) => string | null) => null | (typeof LOCKFILE_VERSIONS[manager])['validVersions'][number]} */
+function getLockfileVersion(filepath, manager, getContent) {
 	// bun.lockb is binary format - handle before loading as text
 	if (manager === 'bun' && (/\.lockb$/).test(filepath)) {
 		const yarnLockContent = loadBunLockbContent(filepath);
@@ -61,7 +63,7 @@ function getLockfileVersion(filepath, manager) {
 		}
 		return null;
 	}
-	const content = loadLockfileContent(filepath);
+	const content = getContent(filepath);
 	if (!content) {
 		return null;
 	}
@@ -214,8 +216,9 @@ export default {
 
 		return {
 			Program(node) {
-				const filename = context.getFilename();
+				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
+				const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 
 				// Check all lockfiles
 				Object.entries(LOCKFILE_VERSIONS).forEach(([manager, versionConfig]) => {
@@ -226,7 +229,7 @@ export default {
 						/** @type {string | number | null} */
 						let version;
 						try {
-							version = getLockfileVersion(lockfilePath, typedManager);
+							version = getLockfileVersion(lockfilePath, typedManager, getContent);
 						} catch (e) {
 							// Malformed lockfile - report error
 							context.report({
@@ -248,7 +251,7 @@ export default {
 
 						if (expectedVersion != null) {
 							// expectedVersion can be a single value or an array
-							const allowedVersions = Array.isArray(expectedVersion) ? expectedVersion : [expectedVersion];
+							const allowedVersions = isArray(expectedVersion) ? expectedVersion : [expectedVersion];
 							if (!allowedVersions.includes(version)) {
 								context.report({
 									node,
