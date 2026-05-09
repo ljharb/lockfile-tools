@@ -13,15 +13,21 @@ import npa from 'npm-package-arg';
 import pacote from 'pacote';
 import { satisfies } from 'semver';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
-import { extractPackageName } from 'lockfile-tools/npm';
+import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import { extractPackageName, traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
+import {
+	parseJSON,
+	getRootObject,
+	getMember,
+	getStringMember,
+	forEachMember,
+	nodeLine,
+} from 'lockfile-tools/json-ast';
 import { makeLockfileContentLoader } from '../utils.mjs';
 
-const { values, entries } = Object;
-const { isArray } = Array;
-const { parse } = JSON;
+const { values } = Object;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
@@ -67,48 +73,29 @@ async function hasShrinkwrap(packageName, version) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromNPMLockfile(content) {
-	const parsed = parse(content);
+	/** @type {PackageEntry[]} */
+	const out = [];
+	const root = getRootObject(parseJSON(content));
 
-	/** @type {(deps: Record<string, { version: string; dependencies?: Record<string, unknown> }>, prefix?: string) => PackageEntry[]} */
-	function collectDeps(deps, prefix = '') {
-		return entries(deps).flatMap(([name, dep]) => {
-			const fullName = prefix ? `${prefix}/${name}` : name;
-			return /** @type {PackageEntry[]} */ ([]).concat(
-				{
-					name: fullName,
-					version: dep.version || /** @type {const} */ ('unknown'),
-					line: findJsonKeyLine(content, name),
-				},
-				dep.dependencies
-					? collectDeps(
-						/** @type {Record<string, { version: string; dependencies?: Record<string, unknown> }>} */ (dep.dependencies),
-						fullName,
-					)
-					: [],
-			);
+	// Lockfile v2/v3: top-level "packages" map
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member, key) => {
+		out.push({
+			name: extractPackageName(key),
+			version: getStringMember(member.value, 'version') || 'unknown',
+			line: nodeLine(member),
 		});
-	}
+	});
 
-	return /** @type {PackageEntry[]} */ ([]).concat(
-		// Check packages (lockfile v2/v3)
-		parsed.packages
-			? entries(parsed.packages)
-				.filter(([key, pkg]) => (
-					key !== ''
-					&& !pkg.link // Skip workspace symlinks (link: true means it's a local workspace package)
-					&& key.startsWith('node_modules/') // Skip workspace package definitions (entries not in node_modules/)
-				))
-				.map(([key, pkg]) => ({
-					name: extractPackageName(key),
-					version: pkg.version || 'unknown',
-					line: findJsonKeyLine(content, key),
-				}))
-			: [],
-		// Check dependencies (lockfile v1)
-		parsed.dependencies
-			? collectDeps(parsed.dependencies)
-			: [],
-	);
+	// Lockfile v1: recursive "dependencies"
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member, fullName) => {
+		out.push({
+			name: fullName,
+			version: getStringMember(member.value, 'version') || 'unknown',
+			line: nodeLine(member),
+		});
+	});
+
+	return out;
 }
 
 /** @type {(content: string) => PackageEntry[]} */
@@ -205,23 +192,27 @@ function extractPackagesFromPNPMLockfile(content) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromBunLockfile(content) {
-	const parsed = parse(content);
+	/** @type {PackageEntry[]} */
+	const out = [];
+	const root = getRootObject(parseJSON(content));
 
-	return parsed.packages
-		? entries(parsed.packages)
-			.filter(([, pkg]) => isArray(pkg) && pkg.length >= 2)
-			.map(([key, pkg]) => {
-				const [nameAtVersion, version] = /** @type {[unknown, string]} */ (pkg);
-				const nameAtVersionStr = String(nameAtVersion);
-				const atIndex = nameAtVersionStr.lastIndexOf('@');
-				const pkgName = atIndex > 0 ? nameAtVersionStr.slice(0, atIndex) : nameAtVersionStr;
-				return {
-					name: pkgName,
-					version,
-					line: findJsonKeyLine(content, key),
-				};
-			})
-		: [];
+	forEachMember(getMember(root, 'packages'), (member) => {
+		if (member.value.type !== 'Array' || member.value.elements.length < 2) {
+			return;
+		}
+		const [nameAtVersionEl, versionEl] = member.value.elements;
+		const nameAtVersion = nameAtVersionEl.value.type === 'String' ? nameAtVersionEl.value.value : '';
+		const version = versionEl.value.type === 'String' ? versionEl.value.value : 'unknown';
+		const atIndex = nameAtVersion.lastIndexOf('@');
+		const pkgName = atIndex > 0 ? nameAtVersion.slice(0, atIndex) : nameAtVersion;
+		out.push({
+			name: pkgName,
+			version,
+			line: nodeLine(member),
+		});
+	});
+
+	return out;
 }
 
 /** @type {(filepath: string) => PackageEntry[]} */
@@ -235,22 +226,26 @@ function extractPackagesFromBunLockbBinary(filepath) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromVltLockfile(content) {
-	const parsed = parse(content);
+	/** @type {PackageEntry[]} */
+	const out = [];
+	const root = getRootObject(parseJSON(content));
 
-	return parsed.nodes
-		? entries(parsed.nodes)
-			.filter(([, node]) => isArray(node) && node.length >= 2)
-			.map(([key, node]) => {
-				const [, name] = /** @type {[unknown, string]} */ (node);
-				const atIndex = key.lastIndexOf('@');
-				const version = atIndex > 0 ? key.slice(atIndex + 1) : '';
-				return {
-					name,
-					version: version || 'unknown',
-					line: findJsonKeyLine(content, key),
-				};
-			})
-		: [];
+	forEachMember(getMember(root, 'nodes'), (member, key) => {
+		if (member.value.type !== 'Array' || member.value.elements.length < 2) {
+			return;
+		}
+		const [, nameEl] = member.value.elements;
+		const name = nameEl.value.type === 'String' ? nameEl.value.value : '';
+		const atIndex = key.lastIndexOf('@');
+		const version = atIndex > 0 ? key.slice(atIndex + 1) : '';
+		out.push({
+			name,
+			version: version || 'unknown',
+			line: nodeLine(member),
+		});
+	});
+
+	return out;
 }
 
 /** @type {{ [k in Lockfile]: (s: string) => PackageEntry[] }} */

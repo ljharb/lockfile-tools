@@ -789,9 +789,8 @@ test('binary-conflicts rule - lockfile conflict with loc defined (non-virtual)',
 	t.end();
 });
 
-test('binary-conflicts rule - lockfile conflict with guaranteed loc (line 447 truthy branch)', async (t) => {
+test('binary-conflicts rule - loc points at the actual package source line', async (t) => {
 	const { readFileSync } = await import('fs');
-	const { basename } = await import('path');
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 	t.teardown(() => {
 		rmSync(tmpDir, { recursive: true, force: true });
@@ -814,41 +813,22 @@ test('binary-conflicts rule - lockfile conflict with guaranteed loc (line 447 tr
 	}, null, 2));
 	writeFileSync(join(tmpDir, 'index.js'), 'var x = 1;');
 
-	// Mock findJsonKeyLine to always return a positive line number
-	const rule = await esmock('eslint-plugin-lockfile/rules/binary-conflicts.mjs', {}, {
-		pacote: {
-			async manifest(/** @type {string} */ spec) {
-				if (spec === 'pkg-a@1.0.0') {
-					return { bin: { samecli: 'bin/a.js' } };
-				}
-				if (spec === 'pkg-b@2.0.0') {
-					return { bin: { samecli: 'bin/b.js' } };
-				}
-				throw new Error(`404 - ${spec}`);
-			},
-		},
-		'lockfile-tools/io': {
-			loadLockfileContent(/** @type {string} */ filepath) {
-				try {
-					return readFileSync(filepath, 'utf8');
-				} catch {
-					return null;
-				}
-			},
-			findJsonKeyLine() { return 5; },
-			getLockfileName(/** @type {string} */ filepath) {
-				return basename(filepath);
-			},
-			loadBunLockbContent() { return null; },
-		},
+	const rule = await createMockedRule({
+		'pkg-a@1.0.0': { bin: { samecli: 'bin/a.js' } },
+		'pkg-b@2.0.0': { bin: { samecli: 'bin/b.js' } },
 	});
+
+	// Resolve the real line of pkg-a from the lockfile source.
+	const lockfileText = readFileSync(join(tmpDir, 'package-lock.json'), 'utf8');
+	const expectedLine = lockfileText.split('\n').findIndex((line) => line.includes('"node_modules/pkg-a"')) + 1;
+	t.ok(expectedLine > 0, 'pkg-a is present in the lockfile source');
 
 	const reports = await runRule(rule, join(tmpDir, 'index.js'));
 	t.ok(reports.length > 0, 'conflict reported');
 	const conflict = reports.find((r) => r.messageId === 'binaryConflictWithPreference' || r.messageId === 'binaryConflict');
 	t.ok(conflict, 'conflict message found');
 	t.ok(conflict.loc, 'loc is defined');
-	t.equal(conflict.loc.start.line, 5, 'loc uses line from findJsonKeyLine');
+	t.equal(conflict.loc.start.line, expectedLine, 'loc points at the actual line of the first conflicting package');
 
 	t.end();
 });

@@ -12,13 +12,17 @@ I don't know off the top of my head what the other package managers have for ver
 import { dirname, join } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import {
+	parseJSON,
+	getRootObject,
+	getNumberMember,
+} from 'lockfile-tools/json-ast';
 import { makeLockfileContentLoader } from '../utils.mjs';
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PackageManager */
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
 const { isArray } = Array;
-const { parse } = JSON;
 
 /** @type {{ [K in PackageManager]: { files: readonly Lockfile[], validVersions: readonly string[] | readonly number[], defaultVersion: string | number } }} */
 const LOCKFILE_VERSIONS = /** @const @type {const} */ ({
@@ -69,8 +73,8 @@ function getLockfileVersion(filepath, manager, getContent) {
 	}
 
 	if (manager === 'npm') {
-		const parsed = parse(content);
-		return parsed.lockfileVersion;
+		const root = getRootObject(parseJSON(content));
+		return getNumberMember(root, 'lockfileVersion');
 	}
 
 	if (manager === 'yarn') {
@@ -91,13 +95,13 @@ function getLockfileVersion(filepath, manager, getContent) {
 
 	if (manager === 'bun') {
 		// bun.lock is JSON with lockfileVersion
-		const parsed = parse(content);
-		return parsed.lockfileVersion || 0;
+		const root = getRootObject(parseJSON(content));
+		return getNumberMember(root, 'lockfileVersion') || 0;
 	}
 
 	if (manager === 'vlt') {
-		const parsed = parse(content);
-		return parsed.lockfileVersion || 0;
+		const root = getRootObject(parseJSON(content));
+		return getNumberMember(root, 'lockfileVersion') || 0;
 	}
 	/* istanbul ignore next - all known managers are handled above */
 	throw new SyntaxError('should never reach here');

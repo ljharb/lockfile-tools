@@ -12,15 +12,21 @@ The rule also warns on non-HTTPS registry URLs as they are insecure.
 
 import { dirname, join } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
-import { traverseDependencies } from 'lockfile-tools/npm';
+import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import { traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
+import {
+	parseJSON,
+	getRootObject,
+	getMember,
+	getStringMember,
+	nodeLine,
+} from 'lockfile-tools/json-ast';
 import { extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
 
 const { values } = Object;
-const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 /** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
@@ -87,38 +93,29 @@ function getNonRegistryType(url) {
 function extractDepsFromNpmLockfile(content) {
 	/** @type {DependencyInfo[]} */
 	const deps = [];
-	const parsed = parse(content);
+	const root = getRootObject(parseJSON(content));
 
-	if (parsed.packages) {
-		Object.entries(parsed.packages).forEach(([key, pkg]) => {
-			if (key === '') {
-				return;
-			}
-			// Skip workspace symlinks (link: true means it's a local workspace package)
-			if (pkg.link) {
-				return;
-			}
-			if (pkg.resolved && typeof pkg.resolved === 'string') {
-				deps.push({
-					name: stripNodeModulesPrefix(key),
-					resolved: pkg.resolved,
-					line: findJsonKeyLine(content, key),
-				});
-			}
-		});
-	}
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member, key) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			deps.push({
+				name: stripNodeModulesPrefix(key),
+				resolved,
+				line: nodeLine(member),
+			});
+		}
+	});
 
-	if (parsed.dependencies) {
-		traverseDependencies(parsed.dependencies, (name, dep) => {
-			if (dep.resolved && typeof dep.resolved === 'string') {
-				deps.push({
-					name,
-					resolved: dep.resolved,
-					line: findJsonKeyLine(content, name),
-				});
-			}
-		});
-	}
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member, name) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			deps.push({
+				name,
+				resolved,
+				line: nodeLine(member),
+			});
+		}
+	});
 
 	return deps;
 }

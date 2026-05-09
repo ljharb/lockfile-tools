@@ -10,13 +10,20 @@ import { readFileSync, existsSync, readdirSync } from 'fs';
 import { homedir } from 'os';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
-import { traverseDependencies } from 'lockfile-tools/npm';
+import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import { traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
+import {
+	parseJSON,
+	getRootObject,
+	getMember,
+	getStringMember,
+	forEachMember,
+	nodeLine,
+} from 'lockfile-tools/json-ast';
 import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
 
-const { entries, values } = Object;
-const { isArray } = Array;
+const { values } = Object;
 const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/types.d.ts').PackageInfo} PackageInfo */
@@ -28,44 +35,26 @@ const { parse } = JSON;
 function extractPackagesFromNpmLockfile(content) {
 	/** @type {PackageInfo[]} */
 	const packages = [];
+	const root = getRootObject(parseJSON(content));
 
-	/** @type {{ packages?: { [k: string]: PackageInfo & { link?: boolean } }, dependencies?: { [k: string]: LockfileDependenciesRecord }}} */
-	const parsed = parse(content);
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member, key) => {
+		packages[packages.length] = {
+			name: stripNodeModulesPrefix(key),
+			integrity: getStringMember(member.value, 'integrity'),
+			resolved: /** @type {RegistryURL | null} */ (getStringMember(member.value, 'resolved')),
+			line: nodeLine(member),
+		};
+	});
 
-	// Check packages
-	if (parsed.packages) {
-		entries(parsed.packages).forEach(([key, pkg]) => {
-			if (key === '') { // Skip root package
-				return;
-			}
-			// Skip workspace symlinks (link: true means it's a local workspace package)
-			if (pkg.link) {
-				return;
-			}
-			// Skip workspace package definitions (entries not in node_modules/)
-			if (!key.startsWith('node_modules/')) {
-				return;
-			}
-			packages[packages.length] = {
-				name: stripNodeModulesPrefix(key),
-				integrity: pkg.integrity || null,
-				resolved: pkg.resolved || null,
-				line: findJsonKeyLine(content, key),
-			};
-		});
-	}
-
-	// Check dependencies (lockfile v1)
-	if (parsed.dependencies) {
-		traverseDependencies(parsed.dependencies, (fullName, dep) => {
-			packages[packages.length] = {
-				name: fullName,
-				integrity: dep.integrity || null,
-				resolved: dep.resolved || null,
-				line: findJsonKeyLine(content, fullName),
-			};
-		});
-	}
+	// Lockfile v1 dependencies (recursive)
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member, fullName) => {
+		packages[packages.length] = {
+			name: fullName,
+			integrity: getStringMember(member.value, 'integrity'),
+			resolved: /** @type {RegistryURL | null} */ (getStringMember(member.value, 'resolved')),
+			line: nodeLine(member),
+		};
+	});
 
 	return packages;
 }
@@ -110,26 +99,29 @@ function extractPackagesFromPnpmLockfile(content) {
 function extractPackagesFromBunLockfile(content) {
 	/** @type {PackageInfo[]} */
 	const packages = [];
+	const root = getRootObject(parseJSON(content));
 
-	/** @type {{ packages: Record<string, [unknown, string, unknown, string]> }} */
-	const parsed = parse(content);
 	// Bun format: packages object with arrays [name@version, version, {}, integrity]
-	if (parsed.packages) {
-		entries(parsed.packages).forEach(([key, pkg]) => {
-			if (isArray(pkg) && pkg.length >= 4) {
-				const [nameAtVersion, version, , integrity] = pkg;
-				// Extract package name from name@version format
-				const atIndex = String(nameAtVersion).lastIndexOf('@');
-				const pkgName = atIndex > 0 ? String(nameAtVersion).slice(0, atIndex) : String(nameAtVersion);
-				packages[packages.length] = {
-					name: key,
-					integrity: integrity || null,
-					resolved: /** @type {RegistryURL} */ (`https://registry.npmjs.org/${pkgName}/-/${pkgName}-${version}.tgz`),
-					line: findJsonKeyLine(content, key),
-				};
-			}
-		});
-	}
+	forEachMember(getMember(root, 'packages'), (member, key) => {
+		if (member.value.type !== 'Array' || member.value.elements.length < 4) {
+			return;
+		}
+		const [nameAtVersionEl, versionEl, , integrityEl] = member.value.elements;
+		if (versionEl.value.type !== 'String') {
+			return;
+		}
+		const nameAtVersion = nameAtVersionEl.value.type === 'String' ? nameAtVersionEl.value.value : '';
+		const version = versionEl.value.value;
+		const atIndex = nameAtVersion.lastIndexOf('@');
+		const pkgName = atIndex > 0 ? nameAtVersion.slice(0, atIndex) : nameAtVersion;
+		const integrity = integrityEl.value.type === 'String' ? integrityEl.value.value : null;
+		packages[packages.length] = {
+			name: key,
+			integrity: integrity || null,
+			resolved: /** @type {RegistryURL} */ (`https://registry.npmjs.org/${pkgName}/-/${pkgName}-${version}.tgz`),
+			line: nodeLine(member),
+		};
+	});
 
 	return packages;
 }
@@ -147,31 +139,30 @@ function extractPackagesFromBunLockbBinary(filepath) {
 function extractPackagesFromVltLockfile(content) {
 	/** @type {PackageInfo[]} */
 	const packages = [];
+	const root = getRootObject(parseJSON(content));
 
-	/** @type {{ nodes: Record<string, [unknown, string, string]> }} */
-	const parsed = parse(content);
 	/*
 	 * vlt format: nodes object with arrays [version_index, name, integrity]
 	 * key format: "··package@version"
 	 */
-	if (parsed.nodes) {
-		entries(parsed.nodes).forEach(([key, node]) => {
-			if (isArray(node) && node.length >= 3) {
-				const [, name, integrity] = node;
-				// Extract version from key (format: "··package@version")
-				const atIndex = key.lastIndexOf('@');
-				const version = atIndex > 0 ? key.slice(atIndex + 1) : '';
-				packages[packages.length] = {
-					name: key,
-					integrity: integrity || null,
-					resolved: version
-						? /** @type {RegistryURL} */ (`https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`)
-						: null,
-					line: findJsonKeyLine(content, key),
-				};
-			}
-		});
-	}
+	forEachMember(getMember(root, 'nodes'), (member, key) => {
+		if (member.value.type !== 'Array' || member.value.elements.length < 3) {
+			return;
+		}
+		const [, nameEl, integrityEl] = member.value.elements;
+		const name = nameEl.value.type === 'String' ? nameEl.value.value : '';
+		const integrity = integrityEl.value.type === 'String' ? integrityEl.value.value : null;
+		const atIndex = key.lastIndexOf('@');
+		const version = atIndex > 0 ? key.slice(atIndex + 1) : '';
+		packages[packages.length] = {
+			name: key,
+			integrity: integrity || null,
+			resolved: version
+				? /** @type {RegistryURL} */ (`https://registry.npmjs.org/${name}/-/${name}-${version}.tgz`)
+				: null,
+			line: nodeLine(member),
+		};
+	});
 
 	return packages;
 }

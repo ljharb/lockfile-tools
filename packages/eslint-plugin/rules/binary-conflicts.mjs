@@ -16,14 +16,21 @@ import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import pacote from 'pacote';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, findJsonKeyLine } from 'lockfile-tools/io';
-import { extractPackageName } from 'lockfile-tools/npm';
+import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
+import { extractPackageName, traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
+import {
+	parseJSON,
+	getRootObject,
+	getMember,
+	getStringMember,
+	forEachMember,
+	nodeLine,
+} from 'lockfile-tools/json-ast';
 import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { values, entries } = Object;
-const { isArray } = Array;
 const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
@@ -95,80 +102,48 @@ function getDirectDependencies(dir) {
 
 /** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
 async function extractPackageBinsFromNpmLockfile(content, dir) {
-	/** @type {PackageBinInfo[]} */
-	const packages = [];
-	const parsed = parse(content);
+	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
 
-	// Check packages (lockfile v2/v3)
-	if (parsed.packages) {
-		const binPromises = entries(parsed.packages).map(async ([key, pkg]) => {
-			if (key === '') {
-				return null;
-			}
-			// Skip workspace symlinks (link: true means it's a local workspace package)
-			if (pkg.link) {
-				return null;
-			}
-			const packageName = extractPackageName(key);
-			const bins = await fetchPackageBins(packageName, pkg.version);
-			if (bins) {
-				return {
-					name: packageName,
-					version: pkg.version || 'unknown',
-					bins,
-					isDirect: directDeps.has(packageName),
-					line: findJsonKeyLine(content, key),
-				};
-			}
-			return null;
+	/** @type {{ member: { value: object, loc: { start: { line: number } } }, packageName: string, name: string, version: string }[]} */
+	const candidates = [];
+
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member, key) => {
+		const packageName = extractPackageName(key);
+		candidates.push({
+			member,
+			packageName,
+			name: packageName,
+			version: getStringMember(member.value, 'version') || 'unknown',
 		});
+	});
 
-		const results = await Promise.all(binPromises);
-		packages.push(...results.filter((p) => p !== null));
-	}
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member, fullName) => {
+		const packageName = fullName.includes('/') ? /** @type {string} */ (fullName.split('/').pop()) : fullName;
+		candidates.push({
+			member,
+			packageName,
+			name: fullName,
+			version: getStringMember(member.value, 'version') || 'unknown',
+		});
+	});
 
-	// Check dependencies (lockfile v1)
-	if (parsed.dependencies) {
-		/** @type {(deps: Record<string, {version: string; dependencies?: Record<string, unknown> }>, prefix?: string) => Promise<void>} */
-		const collectDeps = async (deps, prefix = '') => {
-			const binPromises = entries(deps).map(async ([name, dep]) => {
-				const fullName = prefix ? `${prefix}/${name}` : name;
-				const packageName = name.includes('/') ? name.split('/').pop() : name;
-				/* istanbul ignore next - defensive: packageName is only falsy for names ending in '/' */
-				const bins = await fetchPackageBins(packageName || '', dep.version);
-				if (bins) {
-					return {
-						name: fullName,
-						version: dep.version || 'unknown',
-						bins,
-						/* istanbul ignore next - defensive: packageName is only falsy for names ending in '/' */
-						isDirect: directDeps.has(packageName || ''),
-						line: findJsonKeyLine(content, name),
-					};
-				}
-				return null;
-			});
-
-			const results = await Promise.all(binPromises);
-			packages.push(...results.filter((p) => p !== null));
-
-			// Recursively process nested dependencies
-			await Promise.all(entries(deps).map(async ([name, dep]) => {
-				if (dep.dependencies) {
-					const fullName = prefix ? `${prefix}/${name}` : name;
-					await collectDeps(
-						/** @type {Record<string, {version: string; dependencies?: Record<string, unknown> }>} */ (dep.dependencies),
-						fullName,
-					);
-				}
-			}));
-		};
-
-		await collectDeps(parsed.dependencies);
-	}
-
-	return packages;
+	const results = await Promise.all(candidates.map(async ({
+		member, packageName, name, version,
+	}) => {
+		const bins = await fetchPackageBins(packageName, version);
+		if (bins) {
+			return {
+				name,
+				version,
+				bins,
+				isDirect: directDeps.has(packageName),
+				line: nodeLine(member),
+			};
+		}
+		return null;
+	}));
+	return results.filter((p) => p !== null);
 }
 
 /** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
@@ -311,35 +286,43 @@ async function extractPackageBinsFromBunLockbBinary(filepath, dir) {
 
 /** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
 async function extractPackageBinsFromVltLockfile(content, dir) {
-	/** @type {PackageBinInfo[]} */
-	const packages = [];
-	const parsed = parse(content);
+	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
 
+	/** @type {{ member: { value: object, loc: { start: { line: number } } }, key: string, name: string, version: string }[]} */
+	const candidates = [];
+
 	// vlt format: nodes object with arrays [version, name, integrity]
-	if (parsed.nodes) {
-		const binPromises = entries(parsed.nodes).map(async ([key, node]) => {
-			if (isArray(node) && node.length >= 2) {
-				const [version, name] = node;
-				const bins = await fetchPackageBins(name, String(version));
-				if (bins) {
-					return {
-						name: key,
-						version: String(version),
-						bins,
-						isDirect: directDeps.has(name),
-						line: findJsonKeyLine(content, key),
-					};
-				}
-			}
-			return null;
+	forEachMember(getMember(root, 'nodes'), (member, key) => {
+		if (member.value.type !== 'Array' || member.value.elements.length < 2) {
+			return;
+		}
+		const [versionEl, nameEl] = member.value.elements;
+		const version = versionEl.value.type === 'Number'
+			? String(versionEl.value.value)
+			: (versionEl.value.type === 'String' ? versionEl.value.value : '');
+		const name = nameEl.value.type === 'String' ? nameEl.value.value : '';
+		candidates.push({
+			member, key, name, version,
 		});
+	});
 
-		const results = await Promise.all(binPromises);
-		packages.push(...results.filter((p) => p !== null));
-	}
-
-	return packages;
+	const results = await Promise.all(candidates.map(async ({
+		member, key, name, version,
+	}) => {
+		const bins = await fetchPackageBins(name, version);
+		if (bins) {
+			return {
+				name: key,
+				version,
+				bins,
+				isDirect: directDeps.has(name),
+				line: nodeLine(member),
+			};
+		}
+		return null;
+	}));
+	return results.filter((p) => p !== null);
 }
 
 /** @type {{ [k in Lockfile]: (s: string, d: string) => Promise<PackageBinInfo[]> }} */

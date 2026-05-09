@@ -10,16 +10,22 @@ import { dirname, join } from 'path';
 import { execSync } from 'child_process';
 import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
-import { loadLockfileContent, loadBunLockbContent, getLockfileName, findJsonKeyLine } from 'lockfile-tools/io';
+import { loadLockfileContent, loadBunLockbContent, getLockfileName } from 'lockfile-tools/io';
 import { makeLockfileContentLoader } from '../utils.mjs';
-import { traverseDependencies, extractPackageName } from 'lockfile-tools/npm';
+import { traverseDependenciesAST, forEachNpmPackagesMember, extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile } from 'lockfile-tools/parsers';
+import {
+	parseJSON,
+	getRootObject,
+	getMember,
+	getStringMember,
+	nodeLine,
+} from 'lockfile-tools/json-ast';
 import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 
 const { from, isArray } = Array;
 const { values } = Object;
-const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
 /** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
@@ -40,42 +46,33 @@ function getDefaultRegistry() {
 function extractRegistriesFromNpmLockfile(content) {
 	/** @type {Map<RegistryURL, number>} */
 	const registries = new Map();
+	const root = getRootObject(parseJSON(content));
 
-	const parsed = parse(content);
-
-	// Check packages
-	if (parsed.packages) {
-		Object.entries(parsed.packages).forEach(([key, pkg]) => {
-			// Skip workspace symlinks (link: true means it's a local workspace package)
-			if (pkg.link) {
-				return;
-			}
-			if (pkg.resolved && typeof pkg.resolved === 'string') {
-				const registry = extractRegistryFromUrl(pkg.resolved);
-				if (registry) {
-					const normalized = normalizeRegistry(registry);
-					if (!registries.has(normalized)) {
-						registries.set(normalized, findJsonKeyLine(content, key));
-					}
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			const registry = extractRegistryFromUrl(resolved);
+			if (registry) {
+				const normalized = normalizeRegistry(registry);
+				if (!registries.has(normalized)) {
+					registries.set(normalized, nodeLine(member));
 				}
 			}
-		});
-	}
+		}
+	});
 
-	// Check dependencies (lockfile v1)
-	if (parsed.dependencies) {
-		traverseDependencies(parsed.dependencies, (name, dep) => {
-			if (dep.resolved && typeof dep.resolved === 'string') {
-				const registry = extractRegistryFromUrl(dep.resolved);
-				if (registry) {
-					const normalized = normalizeRegistry(registry);
-					if (!registries.has(normalized)) {
-						registries.set(normalized, findJsonKeyLine(content, name));
-					}
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			const registry = extractRegistryFromUrl(resolved);
+			if (registry) {
+				const normalized = normalizeRegistry(registry);
+				if (!registries.has(normalized)) {
+					registries.set(normalized, nodeLine(member));
 				}
 			}
-		});
-	}
+		}
+	});
 
 	return from(registries.entries()).map(([registry, line]) => ({ registry, line }));
 }
@@ -146,10 +143,10 @@ function extractRegistriesFromBunLockbBinary(filepath) {
 function extractRegistriesFromVltLockfile(content) {
 	/*
 	 * vlt lockfiles don't store registry URLs, they use nodes format
-	 * with no resolved field. Return empty array.
+	 * with no resolved field. Parse to validate JSON, then return empty.
 	 */
 
-	parse(content); // Validate JSON
+	parseJSON(content);
 
 	return [];
 }
@@ -192,44 +189,35 @@ function extractRegistriesFromLockfile(filepath, getContent) {
 function extractPackageRegistriesFromNpmLockfile(content) {
 	/** @type {PackageRegistry[]} */
 	const packages = [];
-	const parsed = parse(content);
+	const root = getRootObject(parseJSON(content));
 
-	if (parsed.packages) {
-		Object.entries(parsed.packages).forEach(([key, pkg]) => {
-			if (key === '') {
-				return;
+	forEachNpmPackagesMember(getMember(root, 'packages'), (member, key) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			const registry = extractRegistryFromUrl(resolved);
+			if (registry) {
+				packages.push({
+					name: extractPackageName(key),
+					registry: normalizeRegistry(registry),
+					line: nodeLine(member),
+				});
 			}
-			// Skip workspace symlinks (link: true means it's a local workspace package)
-			if (pkg.link) {
-				return;
-			}
-			if (pkg.resolved && typeof pkg.resolved === 'string') {
-				const registry = extractRegistryFromUrl(pkg.resolved);
-				if (registry) {
-					packages.push({
-						name: extractPackageName(key),
-						registry: normalizeRegistry(registry),
-						line: findJsonKeyLine(content, key),
-					});
-				}
-			}
-		});
-	}
+		}
+	});
 
-	if (parsed.dependencies) {
-		traverseDependencies(parsed.dependencies, (name, dep) => {
-			if (dep.resolved && typeof dep.resolved === 'string') {
-				const registry = extractRegistryFromUrl(dep.resolved);
-				if (registry) {
-					packages.push({
-						name: extractPackageName(name),
-						registry: normalizeRegistry(registry),
-						line: findJsonKeyLine(content, name),
-					});
-				}
+	traverseDependenciesAST(getMember(root, 'dependencies'), (member, name) => {
+		const resolved = getStringMember(member.value, 'resolved');
+		if (resolved) {
+			const registry = extractRegistryFromUrl(resolved);
+			if (registry) {
+				packages.push({
+					name: extractPackageName(name),
+					registry: normalizeRegistry(registry),
+					line: nodeLine(member),
+				});
 			}
-		});
-	}
+		}
+	});
 
 	return packages;
 }
