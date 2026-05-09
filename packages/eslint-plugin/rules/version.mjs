@@ -16,6 +16,8 @@ import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PackageManager */
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
+const { parse } = JSON;
+
 /** @type {{ [K in PackageManager]: { files: readonly Lockfile[], validVersions: readonly string[] | readonly number[], defaultVersion: string | number } }} */
 const LOCKFILE_VERSIONS = /** @const @type {const} */ ({
 	npm: {
@@ -65,7 +67,7 @@ function getLockfileVersion(filepath, manager) {
 	}
 
 	if (manager === 'npm') {
-		const parsed = JSON.parse(content);
+		const parsed = parse(content);
 		return parsed.lockfileVersion;
 	}
 
@@ -87,12 +89,12 @@ function getLockfileVersion(filepath, manager) {
 
 	if (manager === 'bun') {
 		// bun.lock is JSON with lockfileVersion
-		const parsed = JSON.parse(content);
+		const parsed = parse(content);
 		return parsed.lockfileVersion || 0;
 	}
 
 	if (manager === 'vlt') {
-		const parsed = JSON.parse(content);
+		const parsed = parse(content);
 		return parsed.lockfileVersion || 0;
 	}
 	/* istanbul ignore next - all known managers are handled above */

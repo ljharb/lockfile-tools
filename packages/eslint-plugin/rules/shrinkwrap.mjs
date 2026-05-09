@@ -19,6 +19,8 @@ import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parse
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 
 const { values, entries } = Object;
+const { isArray } = Array;
+const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
@@ -64,7 +66,7 @@ async function hasShrinkwrap(packageName, version) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromNPMLockfile(content) {
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	/** @type {(deps: Record<string, { version: string; dependencies?: Record<string, unknown> }>, prefix?: string) => PackageEntry[]} */
 	function collectDeps(deps, prefix = '') {
@@ -202,11 +204,11 @@ function extractPackagesFromPNPMLockfile(content) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromBunLockfile(content) {
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	return parsed.packages
 		? entries(parsed.packages)
-			.filter(([, pkg]) => Array.isArray(pkg) && pkg.length >= 2)
+			.filter(([, pkg]) => isArray(pkg) && pkg.length >= 2)
 			.map(([key, pkg]) => {
 				const [nameAtVersion, version] = /** @type {[unknown, string]} */ (pkg);
 				const nameAtVersionStr = String(nameAtVersion);
@@ -232,11 +234,11 @@ function extractPackagesFromBunLockbBinary(filepath) {
 
 /** @type {(content: string) => PackageEntry[]} */
 function extractPackagesFromVltLockfile(content) {
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	return parsed.nodes
 		? entries(parsed.nodes)
-			.filter(([, node]) => Array.isArray(node) && node.length >= 2)
+			.filter(([, node]) => isArray(node) && node.length >= 2)
 			.map(([key, node]) => {
 				const [, name] = /** @type {[unknown, string]} */ (node);
 				const atIndex = key.lastIndexOf('@');

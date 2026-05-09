@@ -16,8 +16,9 @@ import { parseYarnLockfile, parsePnpmLockfile } from 'lockfile-tools/parsers';
 import { normalizeRegistry, extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 
-const { from } = Array;
+const { from, isArray } = Array;
 const { values } = Object;
+const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
 /** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
@@ -39,7 +40,7 @@ function extractRegistriesFromNpmLockfile(content) {
 	/** @type {Map<RegistryURL, number>} */
 	const registries = new Map();
 
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	// Check packages
 	if (parsed.packages) {
@@ -147,7 +148,7 @@ function extractRegistriesFromVltLockfile(content) {
 	 * with no resolved field. Return empty array.
 	 */
 
-	JSON.parse(content); // Validate JSON
+	parse(content); // Validate JSON
 
 	return [];
 }
@@ -190,7 +191,7 @@ function extractRegistriesFromLockfile(filepath) {
 function extractPackageRegistriesFromNpmLockfile(content) {
 	/** @type {PackageRegistry[]} */
 	const packages = [];
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	if (parsed.packages) {
 		Object.entries(parsed.packages).forEach(([key, pkg]) => {
@@ -379,7 +380,7 @@ export default {
 
 	create(context) {
 		const config = context.options[0] || getDefaultRegistry();
-		const isObjectConfig = typeof config === 'object' && !Array.isArray(config);
+		const isObjectConfig = typeof config === 'object' && !isArray(config);
 
 		// Validate object config has only one `true` value
 		if (isObjectConfig) {
@@ -410,7 +411,8 @@ export default {
 				if (patterns === true) {
 					defaultRegistry = normalized;
 				} else {
-					const patternArray = Array.isArray(patterns) ? patterns : [patterns];
+					/** @type {string[]} */
+					const patternArray = [].concat(patterns);
 					registryPatterns.set(normalized, patternArray);
 				}
 			});

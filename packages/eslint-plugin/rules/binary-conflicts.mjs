@@ -22,6 +22,7 @@ import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parse
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 
 const { values, entries } = Object;
+const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 
@@ -76,7 +77,7 @@ function getDirectDependencies(dir) {
 	try {
 		const rootPkgPath = join(dir, 'package.json');
 		if (existsSync(rootPkgPath)) {
-			const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf8'));
+			const rootPkg = parse(readFileSync(rootPkgPath, 'utf8'));
 			if (rootPkg.dependencies) {
 				Object.keys(rootPkg.dependencies).forEach((dep) => directDeps.add(dep));
 			}
@@ -94,7 +95,7 @@ function getDirectDependencies(dir) {
 async function extractPackageBinsFromNpmLockfile(content, dir) {
 	/** @type {PackageBinInfo[]} */
 	const packages = [];
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 	const directDeps = getDirectDependencies(dir);
 
 	// Check packages (lockfile v2/v3)
@@ -310,7 +311,7 @@ async function extractPackageBinsFromBunLockbBinary(filepath, dir) {
 async function extractPackageBinsFromVltLockfile(content, dir) {
 	/** @type {PackageBinInfo[]} */
 	const packages = [];
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 	const directDeps = getDirectDependencies(dir);
 
 	// vlt format: nodes object with arrays [version, name, integrity]

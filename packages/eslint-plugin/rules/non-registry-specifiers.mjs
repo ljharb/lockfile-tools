@@ -19,6 +19,7 @@ import { extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 
 const { values } = Object;
+const { parse } = JSON;
 
 /** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
 /** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
@@ -85,7 +86,7 @@ function getNonRegistryType(url) {
 function extractDepsFromNpmLockfile(content) {
 	/** @type {DependencyInfo[]} */
 	const deps = [];
-	const parsed = JSON.parse(content);
+	const parsed = parse(content);
 
 	if (parsed.packages) {
 		Object.entries(parsed.packages).forEach(([key, pkg]) => {
