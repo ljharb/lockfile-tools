@@ -5,13 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.0.0...1.1.0)
+## [1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...1.1.1)
+
+### Commits
+
+- [plugin] [refactor] walk JSON lockfiles via momoa AST [`06eb682`](https://github.com/ljharb/lockfile-tools/commit/06eb68264110a870dc086ca64b872b742d4b484f)
+- [plugin] [fix] honor piped/in-memory lockfile content [`a6d0dde`](https://github.com/ljharb/lockfile-tools/commit/a6d0dde70f8c2e4ec224777b0379471a4e78cc7a)
+- [plugin] [refactor] cache static builtins at module level [`6064cba`](https://github.com/ljharb/lockfile-tools/commit/6064cba8950f21ea12e5ea71dbfd3f5cd31921db)
+- [eslint plugin] [docs] update rule docs [`898c7d4`](https://github.com/ljharb/lockfile-tools/commit/898c7d4bbdc751300d7adc63d1a075a2bbd61540)
+- [plugin] [fix] attach noop parser to recommended flat config [`0bbe61f`](https://github.com/ljharb/lockfile-tools/commit/0bbe61f81f97ec1e1cb4476c24f1418c14244f8d)
+- [plugin] [fix] strip leading `node_modules/` from reported package names [`9ffac3f`](https://github.com/ljharb/lockfile-tools/commit/9ffac3f9a905df847a8c2ee08378baa46a00564f)
+- [eslint plugin] [fix] fix rule docs urls [`4b0d1ac`](https://github.com/ljharb/lockfile-tools/commit/4b0d1ac83e719a23c0437a88a1c9940518859118)
+- [plugin] [deps] update `lockfile-tools`, `minimatch`, `pacote`, `semver` [`c1a6f3b`](https://github.com/ljharb/lockfile-tools/commit/c1a6f3b62941f8c5ed4db341cc32dc99b3af0dfc)
+- [plugin] [dev deps] update `@eslint/core`, `auto-changelog`, `eslint-doc-generator` [`e396de0`](https://github.com/ljharb/lockfile-tools/commit/e396de0062ded906abb2adc284369e5b26fad7bb)
+
+## [eslint-plugin-lockfile@1.1.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.0.0...eslint-plugin-lockfile@1.1.0) - 2026-01-28
 
 ### Commits
 
 - [plugin] [new] add `shrinkwrap` rule [`f61b54f`](https://github.com/ljharb/lockfile-tools/commit/f61b54f076f25bd158785a197149b3df7779e08b)
 - [*] [tests] increase coverage [`abd6a7f`](https://github.com/ljharb/lockfile-tools/commit/abd6a7f412bc34fe0cbb2d043389bd04b75e7e0f)
 - [plugin] [refactor] avoid for-of [`6f36b77`](https://github.com/ljharb/lockfile-tools/commit/6f36b777c9a43ff0d9d651977334a02840290c51)
+- [plugin] v1.1.0 [`eec0659`](https://github.com/ljharb/lockfile-tools/commit/eec0659352538355a2fb26d5f061ff255abdc0fb)
 - [plugin, tools] [refactor] use arborist’s .forEach [`cf7b30e`](https://github.com/ljharb/lockfile-tools/commit/cf7b30e79fc9b014cd9d02e1f35b830307acf20d)
 - [*] [dev deps] update `@types/npmcli__arborist`, `@eslint/core`, `npmignore` [`ae9ccf7`](https://github.com/ljharb/lockfile-tools/commit/ae9ccf7a1e1bd65d0a039b7fc2b755f3fe4fad2b)
 - [plugin] [deps] update `lockfile-tools` [`26f9970`](https://github.com/ljharb/lockfile-tools/commit/26f997021a20f86f55807949e80e8035a150bee8)
