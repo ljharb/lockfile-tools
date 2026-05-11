@@ -1,11 +1,36 @@
-name: 'Tests: node.js >= 22.21'
+name: 'Tests: node × eslint'
 
 on: [pull_request, push]
 
 jobs:
-  tests:
+  eslint-8-lowest:
+    name: 'eslint 8.8.0'
     uses: ljharb/actions/.github/workflows/node.yml@main
     with:
       range: '^22.21 || ^24.11 || >= 25.2'
       type: minors
-      command: npm run tests-only
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@8.8.0 eslint-doc-generator@1 && npm run tests-only'
+
+  eslint-8-latest:
+    name: 'eslint v8 (latest)'
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '^22.21 || ^24.11 || >= 25.2'
+      type: minors
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@8 && npm run tests-only'
+
+  eslint-9-lowest:
+    name: 'eslint 9.39.2'
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '^22.21 || ^24.11 || >= 25.2'
+      type: minors
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@9.39.2 && npm run tests-only'
+
+  eslint-9-latest:
+    name: 'eslint v9 (latest)'
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '^22.21 || ^24.11 || >= 25.2'
+      type: minors
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@9 && npm run tests-only'

@@ -2,7 +2,7 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createESLint } from './helpers/eslint-compat.mjs';
+import { createESLint, eslintMajorVersion } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
 // These tests verify that rules consume `sourceCode.text` for the file
@@ -10,7 +10,14 @@ import plugin from 'eslint-plugin-lockfile';
 // --stdin --stdin-filename`) is honored even when the file does not
 // exist on disk, and even when an on-disk version differs.
 
-test('version rule - reads piped lockfile content via lintText', async (t) => {
+// The plugin's `recommended` config attaches a noop `languageOptions.parser`
+// so non-JS lockfiles can be linted. Legacy (v8) config has no equivalent
+// and falls through to espree, which fatals on JSON. Skip these on v8.
+const skipOnV8 = eslintMajorVersion < 9
+	? { skip: 'requires flat-config languageOptions.parser; not applicable to ESLint 8 legacy config' }
+	: {};
+
+test('version rule - reads piped lockfile content via lintText', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
@@ -41,7 +48,7 @@ test('version rule - reads piped lockfile content via lintText', async (t) => {
 	t.end();
 });
 
-test('version rule - prefers piped content over on-disk version', async (t) => {
+test('version rule - prefers piped content over on-disk version', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
@@ -73,7 +80,7 @@ test('version rule - prefers piped content over on-disk version', async (t) => {
 	t.end();
 });
 
-test('integrity rule - preserves internal node_modules/ for nested deps', async (t) => {
+test('integrity rule - preserves internal node_modules/ for nested deps', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
@@ -115,7 +122,7 @@ test('integrity rule - preserves internal node_modules/ for nested deps', async 
 	t.end();
 });
 
-test('integrity rule - reads piped lockfile content via lintText', async (t) => {
+test('integrity rule - reads piped lockfile content via lintText', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {

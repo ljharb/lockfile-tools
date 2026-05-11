@@ -2,14 +2,14 @@ import test from 'tape';
 import { mkdtempSync, writeFileSync, rmSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { createESLint } from './helpers/eslint-compat.mjs';
+import { createESLint, eslintMajorVersion } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
-// Regression: prior to the noop parser, applying `lockfile.configs.recommended`
-// directly to a non-JS lockfile crashed espree with `Unexpected token :` (JSON),
-// `Unexpected token` (yarn-lock), etc. before any rule could fire.
+const skipOnV8 = eslintMajorVersion < 9
+	? { skip: 'requires flat-config languageOptions.parser; not applicable to ESLint 8 legacy config' }
+	: {};
 
-test('recommended config - lints package-lock.json without parser error', async (t) => {
+test('recommended config - lints package-lock.json without parser error', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
@@ -39,7 +39,7 @@ test('recommended config - lints package-lock.json without parser error', async 
 	t.end();
 });
 
-test('recommended config - lints yarn.lock without parser error', async (t) => {
+test('recommended config - lints yarn.lock without parser error', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
@@ -62,7 +62,7 @@ test('recommended config - lints yarn.lock without parser error', async (t) => {
 	t.end();
 });
 
-test('recommended config - lints pnpm-lock.yaml without parser error', async (t) => {
+test('recommended config - lints pnpm-lock.yaml without parser error', skipOnV8, async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
 	try {
