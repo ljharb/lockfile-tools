@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { writeFileSync, rmSync, existsSync, readdirSync } from 'fs';
+import { writeFileSync, rmSync, existsSync, readdirSync, lstatSync } from 'fs';
+import { randomUUID } from 'crypto';
 import { join, resolve, dirname, basename } from 'path';
 import { ESLint } from 'eslint';
 import pargs from 'pargs';
@@ -147,13 +148,16 @@ export async function lintLockfile(lockfilePath, options = {}) {
 				cwd: targetDir,
 			};
 		} else {
-			// ESLint 8 uses legacy config
-			lintTarget = join(targetDir, 'eslint-lockfile-check.js');
-			tempFileCreated = !existsSync(lintTarget);
+			// ESLint 8 needs a real .js file to lint, and the rule uses
+			// `dirname(context.filename)` to find the lockfile, so the temp
+			// file has to live next to the lockfile. Use an unguessable name
+			// and the `wx` flag so writeFileSync fails atomically if anything
+			// already exists at that path (including an attacker-planted
+			// symlink), removing the prior existsSync/writeFileSync race.
+			lintTarget = join(targetDir, `eslint-lockfile-check.${randomUUID()}.js`);
+			writeFileSync(lintTarget, '// Temporary file for eslint-plugin-lockfile\n', { flag: 'wx' });
+			tempFileCreated = true;
 
-			if (tempFileCreated) {
-				writeFileSync(lintTarget, '// Temporary file for eslint-plugin-lockfile\n');
-			}
 			eslintOptions = /** @type {import('eslint').ESLint.Options} */ ({
 				useEslintrc: false,
 				plugins: { lockfile: plugin },
@@ -204,8 +208,14 @@ export async function lintLockfile(lockfilePath, options = {}) {
 		console.error('Error linting lockfile:', /** @type {Error} */ (error).message);
 		return 1;
 	} finally {
-		if (tempFileCreated && existsSync(lintTarget)) {
-			rmSync(lintTarget);
+		if (tempFileCreated) {
+			// lstat (no symlink-follow) so we never unlink through a symlink
+			// that was swapped in after our writeFileSync.
+			try {
+				if (lstatSync(lintTarget).isFile()) {
+					rmSync(lintTarget);
+				}
+			} catch { /* file missing — fine */ }
 		}
 	}
 }
