@@ -5,11 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.2](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.1...1.0.2)
+## [1.0.3](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.2...1.0.3)
+
+### Commits
+
+- [cli] [fix] close TOCTOU window when creating the ESLint-8 lint target [`6be4cd0`](https://github.com/ljharb/lockfile-tools/commit/6be4cd029f81ca815e23132a663861870b926cac)
+- [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
+- [cli] [deps] update `eslint-plugin-lockfile`, `lockfile-tools`, `pargs` [`1ec2ba7`](https://github.com/ljharb/lockfile-tools/commit/1ec2ba748293162c9057245f889fa0e21d29b633)
+- [cli] [dev deps] update `auto-changelog` [`e6b09ae`](https://github.com/ljharb/lockfile-tools/commit/e6b09aefae99f72df8adcf5381988a2f9d15c804)
+
+## [lintlock@1.0.2](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.1...lintlock@1.0.2) - 2026-04-12
 
 ### Commits
 
 - [cli] [fix] lint lockfiles directly with a no-op parser in ESLint 9+ [`72507bd`](https://github.com/ljharb/lockfile-tools/commit/72507bd75127bbd2a209a256f71805d6ab473a79)
+- [cli] v1.0.2 [`c5ae310`](https://github.com/ljharb/lockfile-tools/commit/c5ae310efd3e3baa4e08f5e0093b641cc71907f4)
 - [cli] [fix] restore filePath patching for ESLint 8 temp file results [`c2dc054`](https://github.com/ljharb/lockfile-tools/commit/c2dc0541d60153577381ee3e828b59d8bfca726d)
 - [cli] [deps] update `lockfile-tools`, `pargs` [`d9aa292`](https://github.com/ljharb/lockfile-tools/commit/d9aa292a3cf209d65003b4fdc90103436d9a8404)
 - [*] [dev deps] update `@types/npmcli__arborist`, `@eslint/core`, `npmignore` [`ae9ccf7`](https://github.com/ljharb/lockfile-tools/commit/ae9ccf7a1e1bd65d0a039b7fc2b755f3fe4fad2b)
