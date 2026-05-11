@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...1.1.1)
+## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.1...1.2.0)
+
+### Commits
+
+- [plugin] [fix] surface non-E404 pacote failures via a fetchFailed diagnostic [`d2d848f`](https://github.com/ljharb/lockfile-tools/commit/d2d848fc8661e76bae2300ca5fe64fe419939f34)
+- [plugin] [new] gate pacote network egress behind an allowedHosts option [`206176d`](https://github.com/ljharb/lockfile-tools/commit/206176d92cbf60b526e763bf83a488769261fa88)
+- [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
+- [plugin] [refactor] coalesce pacote manifest fetches across rules [`8c2fb34`](https://github.com/ljharb/lockfile-tools/commit/8c2fb344009d571a3ce9c0f2b3179f89c1d3e741)
+- [plugin] [deps] update `lockfile-tools` [`e744810`](https://github.com/ljharb/lockfile-tools/commit/e7448103778f92d81c9b5d4130aaacebbf6a9a9c)
+
+## [eslint-plugin-lockfile@1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...eslint-plugin-lockfile@1.1.1) - 2026-05-08
 
 ### Commits
 
@@ -15,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [eslint plugin] [docs] update rule docs [`898c7d4`](https://github.com/ljharb/lockfile-tools/commit/898c7d4bbdc751300d7adc63d1a075a2bbd61540)
 - [plugin] [fix] attach noop parser to recommended flat config [`0bbe61f`](https://github.com/ljharb/lockfile-tools/commit/0bbe61f81f97ec1e1cb4476c24f1418c14244f8d)
 - [plugin] [fix] strip leading `node_modules/` from reported package names [`9ffac3f`](https://github.com/ljharb/lockfile-tools/commit/9ffac3f9a905df847a8c2ee08378baa46a00564f)
+- [plugin] v1.1.1 [`d7e93ed`](https://github.com/ljharb/lockfile-tools/commit/d7e93ed9576b6f9d96ad99d4f48f387f7c84f6c4)
 - [eslint plugin] [fix] fix rule docs urls [`4b0d1ac`](https://github.com/ljharb/lockfile-tools/commit/4b0d1ac83e719a23c0437a88a1c9940518859118)
 - [plugin] [deps] update `lockfile-tools`, `minimatch`, `pacote`, `semver` [`c1a6f3b`](https://github.com/ljharb/lockfile-tools/commit/c1a6f3b62941f8c5ed4db341cc32dc99b3af0dfc)
 - [plugin] [dev deps] update `@eslint/core`, `auto-changelog`, `eslint-doc-generator` [`e396de0`](https://github.com/ljharb/lockfile-tools/commit/e396de0062ded906abb2adc284369e5b26fad7bb)
