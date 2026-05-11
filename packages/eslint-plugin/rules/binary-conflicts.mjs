@@ -15,9 +15,9 @@ This rule uses pacote to fetch package manifests without requiring node_modules 
 import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import npa from 'npm-package-arg';
-import pacote from 'pacote';
 import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
+import { getManifest } from '../manifest-cache.mjs';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
 import { extractPackageName, traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
 import { parseYarnLockfile, createLockfileExtractor } from 'lockfile-tools/parsers';
@@ -134,10 +134,7 @@ async function fetchPackageBins(packageName, version, allowedHosts) {
 		return null;
 	}
 	try {
-		const manifest = await pacote.manifest(`${packageName}@${version}`, {
-			preferOnline: false, // Use cache if available
-			fullMetadata: false, // We only need basic fields
-		});
+		const manifest = await getManifest(`${packageName}@${version}`);
 
 		if (!manifest.bin) {
 			return null;

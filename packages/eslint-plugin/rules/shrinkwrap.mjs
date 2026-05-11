@@ -10,9 +10,9 @@ This rule uses pacote to fetch package manifests without requiring node_modules 
 
 import { dirname, join } from 'path';
 import npa from 'npm-package-arg';
-import pacote from 'pacote';
 import { minimatch } from 'minimatch';
 import { satisfies } from 'semver';
+import { getManifest } from '../manifest-cache.mjs';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
 import { extractPackageName, traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
@@ -141,10 +141,7 @@ async function hasShrinkwrap(packageName, version, allowedHosts) {
 		return null;
 	}
 	try {
-		const manifest = await pacote.manifest(`${packageName}@${version}`, {
-			preferOnline: false, // Use cache if available
-			fullMetadata: true, // Need _hasShrinkwrap field
-		});
+		const manifest = await getManifest(`${packageName}@${version}`);
 
 		// eslint-disable-next-line no-underscore-dangle
 		return !!manifest._hasShrinkwrap;
