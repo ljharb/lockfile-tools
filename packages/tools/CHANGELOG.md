@@ -5,11 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...1.1.0)
+## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.1.0...1.2.0)
+
+### Commits
+
+- [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
+- [tools] [new] add makeEmpty factory parameter to createLockfileExtractor [`1ad72ee`](https://github.com/ljharb/lockfile-tools/commit/1ad72ee8f2a495d3c9bc31933cfc43a9a56824b6)
+
+## [lockfile-tools@1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...lockfile-tools@1.1.0) - 2026-05-08
 
 ### Commits
 
 - [tools] [new] add JSON AST helpers and AST-based npm walkers [`5678b75`](https://github.com/ljharb/lockfile-tools/commit/5678b75cfd7bd494eb6bbc4dadb3508521694885)
+- [tools] v1.1.0 [`c38cbbd`](https://github.com/ljharb/lockfile-tools/commit/c38cbbd073dd7e53752beeeb2170b81ce6661208)
 - [tools] [dev deps] update `@types/npmcli__arborist`, `auto-changelog`, `eslint` [`98363c9`](https://github.com/ljharb/lockfile-tools/commit/98363c9118c517f7f3d49851dee56d382362ab5a)
 - [tools] [new] add optional content loader to `createLockfileExtractor` [`5d31b1e`](https://github.com/ljharb/lockfile-tools/commit/5d31b1e9a1817fd27c6eb1afa9d6bd7e08655d20)
 
