@@ -110,6 +110,14 @@ Behavior:
   permission to a subtree.
 - An empty array (`"allowedHosts": []`) blocks every non-registry spec.
 
+## Other Diagnostics
+
+The rule also reports a `fetchFailed` diagnostic when `pacote.manifest` fails
+with anything other than a 404 (e.g., network timeout, 5xx). A 404 is treated
+as an intentional skip — that's a legitimate outcome for a lockfile entry
+that's no longer published — but other errors are surfaced so CI doesn't
+silently pass when the registry is unreachable.
+
 ## When Not To Use It
 
 If you are not concerned about dependencies shipping `npm-shrinkwrap.json` files, or if your project intentionally depends on packages that use shrinkwrap for stability reasons, you may want to disable this rule or use the `ignore` option.

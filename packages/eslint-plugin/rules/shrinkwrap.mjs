@@ -133,21 +133,33 @@ function isAllowedSpec(version, allowedHosts) {
 }
 
 /**
- * Check if a package has an npm-shrinkwrap.json via its manifest
- * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<boolean | null>}
+ * @typedef {{ hasShrinkwrap: boolean | null } | { fetchError: string }} HasShrinkwrapResult
+ */
+
+/**
+ * Check if a package has an npm-shrinkwrap.json via its manifest.
+ * Resolves to:
+ *   - `{ hasShrinkwrap: boolean }` when the registry returns a manifest,
+ *   - `{ hasShrinkwrap: null }` when the spec was disallowed or the
+ *     registry returned 404 (intentional skip),
+ *   - `{ fetchError: string }` for any other failure.
+ * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<HasShrinkwrapResult>}
  */
 async function hasShrinkwrap(packageName, version, allowedHosts) {
 	if (!isAllowedSpec(version, allowedHosts)) {
-		return null;
+		return { hasShrinkwrap: null };
 	}
 	try {
 		const manifest = await getManifest(`${packageName}@${version}`);
 
 		// eslint-disable-next-line no-underscore-dangle
-		return !!manifest._hasShrinkwrap;
-	} catch {
-		// Package not found or network error
-		return null;
+		return { hasShrinkwrap: !!manifest._hasShrinkwrap };
+	} catch (e) {
+		const code = /** @type {{ code?: unknown }} */ (e)?.code;
+		if (code === 'E404') {
+			return { hasShrinkwrap: null };
+		}
+		return { fetchError: e instanceof Error ? e.message : String(e) };
 	}
 }
 
@@ -376,6 +388,7 @@ export default {
 			hasShrinkwrap: 'Package `{{name}}@{{version}}` in lockfile `{{filename}}` includes an npm-shrinkwrap.json',
 			invalidIgnoreEntry: 'Invalid ignore entry `{{specifier}}`: {{error}}',
 			malformedLockfile: 'Lockfile "{{filename}}" is malformed: {{error}}',
+			fetchFailed: 'Failed to fetch manifest for `{{name}}@{{version}}`: {{error}}',
 		},
 	},
 
@@ -467,25 +480,29 @@ export default {
 					}) => {
 						const result = await hasShrinkwrap(name, version, allowedHosts);
 						return {
-							name,
-							version,
-							hasShrinkwrap: result,
+							name, version, result,
 						};
 					}));
 
 					results.forEach(({
-						name,
-						version,
-						hasShrinkwrap: has,
+						name, version, result,
 					}) => {
-						if (has && !isIgnored(name, version, parsedIgnoreList)) {
+						if ('fetchError' in result) {
+							context.report({
+								node,
+								messageId: 'fetchFailed',
+								data: {
+									name, version, error: result.fetchError,
+								},
+							});
+							return;
+						}
+						if (result.hasShrinkwrap && !isIgnored(name, version, parsedIgnoreList)) {
 							context.report({
 								node,
 								messageId: 'hasShrinkwrap',
 								data: {
-									name,
-									version,
-									filename: 'virtual',
+									name, version, filename: 'virtual',
 								},
 							});
 						}
@@ -524,10 +541,7 @@ export default {
 					}) => {
 						const result = await hasShrinkwrap(name, version, allowedHosts);
 						return {
-							name,
-							version,
-							line,
-							hasShrinkwrap: result,
+							name, version, line, result,
 						};
 					}));
 
@@ -535,20 +549,28 @@ export default {
 						name,
 						version,
 						line,
-						hasShrinkwrap: has,
+						result,
 					}) => {
-						if (has && !isIgnored(name, version, parsedIgnoreList)) {
-							/** @type {import('eslint').AST.SourceLocation | undefined} */
-							const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : void undefined;
-
+						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : void undefined;
+						if ('fetchError' in result) {
+							context.report({
+								node,
+								loc,
+								messageId: 'fetchFailed',
+								data: {
+									name, version, error: result.fetchError,
+								},
+							});
+							return;
+						}
+						if (result.hasShrinkwrap && !isIgnored(name, version, parsedIgnoreList)) {
 							context.report({
 								node,
 								loc,
 								messageId: 'hasShrinkwrap',
 								data: {
-									name,
-									version,
-									filename: lockfileName,
+									name, version, filename: lockfileName,
 								},
 							});
 						}

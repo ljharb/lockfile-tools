@@ -662,3 +662,94 @@ test('binary-conflicts rule - allowedHosts option supports file: globs', async (
 	t.notOk(seen.some((s) => s.includes('file:./other/blocked')), 'file: spec not matching any allowedHosts glob is blocked');
 	t.end();
 });
+
+test('binary-conflicts rule - non-E404 pacote failures surface as fetchFailed', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/binary-conflicts.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				const err = /** @type {Error & { code?: string }} */ (new Error(`network timeout for ${spec}`));
+				err.code = 'ETIMEDOUT';
+				throw err;
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/foo': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/foo/-/foo-1.0.0.tgz',
+			},
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) { reports.push(info); },
+	};
+
+	const ruleInstance = rule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.ok(reports.some((r) => r.messageId === 'fetchFailed'), 'fetchFailed messageId reported for ETIMEDOUT');
+	t.ok(reports.some((r) => String(r.data?.error).includes('network timeout')), 'error message includes pacote error');
+	t.end();
+});
+
+test('binary-conflicts rule - E404 is still silently skipped', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/binary-conflicts.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				const err = /** @type {Error & { code?: string }} */ (new Error(`404 Not Found - ${spec}`));
+				err.code = 'E404';
+				throw err;
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/foo': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/foo/-/foo-1.0.0.tgz',
+			},
+		},
+	}));
+	const testFile = join(tmpDir, 'index.js');
+	writeFileSync(testFile, 'const x = 1;');
+
+	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
+		report(info) { reports.push(info); },
+	};
+
+	const ruleInstance = rule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.equal(reports.length, 0, 'no diagnostics when registry returns 404');
+	t.end();
+});

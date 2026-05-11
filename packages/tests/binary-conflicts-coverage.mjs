@@ -201,7 +201,7 @@ async function createMockedRule(manifests) {
 				if (spec in manifests) {
 					return manifests[spec];
 				}
-				throw new Error(`404 Not Found - ${spec}`);
+				const err = /** @type {Error & { code: string }} */ (new Error(`404 Not Found - ${spec}`)); err.code = 'E404'; throw err;
 			},
 		},
 	});
@@ -504,7 +504,7 @@ test('binary-conflicts rule - virtual lockfile binary conflict', async (t) => {
 				if (spec === 'pkg-b@2.0.0') {
 					return { bin: { mycli: 'bin/b.js' } };
 				}
-				throw new Error(`404 Not Found - ${spec}`);
+				const err = /** @type {Error & { code: string }} */ (new Error(`404 Not Found - ${spec}`)); err.code = 'E404'; throw err;
 			},
 		},
 		'lockfile-tools/virtual': {
@@ -557,7 +557,7 @@ test('binary-conflicts rule - virtual lockfile conflict without direct dep prefe
 				if (spec === 'pkg-b@2.0.0') {
 					return { bin: { mycli: 'bin/b.js' } };
 				}
-				throw new Error(`404 Not Found - ${spec}`);
+				const err = /** @type {Error & { code: string }} */ (new Error(`404 Not Found - ${spec}`)); err.code = 'E404'; throw err;
 			},
 		},
 		'lockfile-tools/virtual': {

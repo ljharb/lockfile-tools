@@ -14,7 +14,9 @@ function createMockPacote(manifests) {
 			if (spec in manifests) {
 				return manifests[spec];
 			}
-			throw new Error(`404 Not Found - ${spec}`);
+			const err = /** @type {Error & { code: string }} */ (new Error(`404 Not Found - ${spec}`));
+			err.code = 'E404';
+			throw err;
 		},
 	};
 }
@@ -1222,5 +1224,65 @@ test('shrinkwrap rule - allowedHosts option supports file: globs', async (t) => 
 	t.ok(seen.some((s) => s.includes('file:./packages/local-pkg')), 'file: directory spec matching glob is forwarded');
 	t.ok(seen.some((s) => s.includes('file:./vendor/foo.tgz')), 'file: tarball spec matching glob is forwarded');
 	t.notOk(seen.some((s) => s.includes('file:./other/blocked')), 'file: spec not matching any allowedHosts glob is blocked');
+	t.end();
+});
+
+test('shrinkwrap rule - non-E404 pacote failures surface as fetchFailed', async (t) => {
+	const rule = await esmock('eslint-plugin-lockfile/rules/shrinkwrap.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				const err = /** @type {Error & { code?: string }} */ (new Error(`network timeout for ${spec}`));
+				err.code = 'ETIMEDOUT';
+				throw err;
+			},
+		},
+	});
+
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/foo': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/foo/-/foo-1.0.0.tgz',
+			},
+		},
+	}));
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.ok(reports.some((r) => r.messageId === 'fetchFailed'), 'fetchFailed messageId reported for ETIMEDOUT');
+	t.ok(reports.some((r) => String(r.data?.error).includes('network timeout')), 'error message includes pacote error');
+	t.end();
+});
+
+test('shrinkwrap rule - E404 is still silently skipped', async (t) => {
+	// createMockPacote already throws with code: 'E404' for unknown manifests,
+	// so we just call it with an empty manifest map to force E404 for every
+	// pacote.manifest call.
+	const rule = await createMockedRule({});
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/foo': {
+				version: '1.0.0',
+				resolved: 'https://registry.npmjs.org/foo/-/foo-1.0.0.tgz',
+			},
+		},
+	}));
+
+	const reports = await runRule(rule, join(tmpDir, 'index.js'));
+
+	t.equal(reports.length, 0, 'no diagnostics when registry returns 404');
 	t.end();
 });

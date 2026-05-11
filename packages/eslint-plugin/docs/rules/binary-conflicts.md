@@ -69,7 +69,12 @@ Examples of **correct** code for this rule:
 
 ## Error Messages
 
-The rule provides different error messages based on the conflict scenario:
+The rule provides different error messages based on the conflict scenario.
+It also reports a `fetchFailed` diagnostic when `pacote.manifest` fails with
+anything other than a 404 (e.g., network timeout, 5xx). A 404 is treated as an
+intentional skip — that's a legitimate outcome for a lockfile entry that's no
+longer published — but other errors are surfaced so CI doesn't silently pass
+when the registry is unreachable.
 
 ### Multiple direct dependencies with the same binary
 

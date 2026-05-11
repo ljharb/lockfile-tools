@@ -47,6 +47,14 @@ const { parse } = JSON;
  */
 
 /**
+ * @typedef {Object} FetchErrorInfo
+ * @property {string} name - Package name
+ * @property {string} version - Package version
+ * @property {string} error - Error message from pacote
+ * @property {number} line - Line number in lockfile where package appears
+ */
+
+/**
  * Returns the host portion of a non-registry spec, or null if it can't be
  * extracted. Used to honor a host allowlist for git/remote specs without
  * blocking ordinary registry traffic.
@@ -126,34 +134,49 @@ function isAllowedSpec(version, allowedHosts) {
 }
 
 /**
- * Fetch package manifest and extract bin information
- * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<Record<string, string> | null>}
+ * @typedef {{ bins: Record<string, string> | null } | { fetchError: string }} FetchPackageBinsResult
+ */
+
+/**
+ * Fetch package manifest and extract bin information.
+ * Resolves to:
+ *   - `{ bins: Record<string, string> }` when the manifest declares bins,
+ *   - `{ bins: null }` when there are no bins, the spec was disallowed, or
+ *     the registry returned 404 (intentional skip),
+ *   - `{ fetchError: string }` for any other failure (so the rule can
+ *     surface it instead of silently passing).
+ * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<FetchPackageBinsResult>}
  */
 async function fetchPackageBins(packageName, version, allowedHosts) {
 	if (!isAllowedSpec(version, allowedHosts)) {
-		return null;
+		return { bins: null };
 	}
 	try {
 		const manifest = await getManifest(`${packageName}@${version}`);
 
 		if (!manifest.bin) {
-			return null;
+			return { bins: null };
 		}
 
 		// bin can be a string or an object
 		if (typeof manifest.bin === 'string') {
 			// Single binary with the package name
-			return { [packageName]: manifest.bin };
+			return { bins: { [packageName]: manifest.bin } };
 		}
 
 		if (typeof manifest.bin === 'object' && manifest.bin !== null) {
-			return manifest.bin;
+			return { bins: manifest.bin };
 		}
 
-		return null;
-	} catch {
-		// Package not found or network error
-		return null;
+		return { bins: null };
+	} catch (e) {
+		const code = /** @type {{ code?: unknown }} */ (e)?.code;
+		if (code === 'E404') {
+			// Package not present in the registry — that's a legitimate
+			// outcome for a lockfile with non-published or removed packages.
+			return { bins: null };
+		}
+		return { fetchError: e instanceof Error ? e.message : String(e) };
 	}
 }
 
@@ -181,7 +204,35 @@ function getDirectDependencies(dir) {
 	return directDeps;
 }
 
-/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/**
+ * @typedef {Object} BinsExtractResult
+ * @property {PackageBinInfo[]} packages
+ * @property {FetchErrorInfo[]} errors
+ */
+
+/**
+ * Partition per-package results into the success/error buckets.
+ * @type {(results: ({ pkg: PackageBinInfo } | { error: FetchErrorInfo } | null)[]) => BinsExtractResult}
+ */
+function partitionResults(results) {
+	/** @type {PackageBinInfo[]} */
+	const packages = [];
+	/** @type {FetchErrorInfo[]} */
+	const errors = [];
+	results.forEach((r) => {
+		if (!r) {
+			return;
+		}
+		if ('pkg' in r) {
+			packages.push(r.pkg);
+		} else {
+			errors.push(r.error);
+		}
+	});
+	return { packages, errors };
+}
+
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 async function extractPackageBinsFromNpmLockfile(content, dir, allowedHosts) {
 	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
@@ -212,22 +263,28 @@ async function extractPackageBinsFromNpmLockfile(content, dir, allowedHosts) {
 	const results = await Promise.all(candidates.map(async ({
 		member, packageName, name, version,
 	}) => {
-		const bins = await fetchPackageBins(packageName, version, allowedHosts);
-		if (bins) {
+		const result = await fetchPackageBins(packageName, version, allowedHosts);
+		const line = nodeLine(member);
+		if ('fetchError' in result) {
 			return {
-				name,
-				version,
-				bins,
-				isDirect: directDeps.has(packageName),
-				line: nodeLine(member),
+				error: {
+					name, version, error: result.fetchError, line,
+				},
+			};
+		}
+		if (result.bins) {
+			return {
+				pkg: {
+					name, version, bins: result.bins, isDirect: directDeps.has(packageName), line,
+				},
 			};
 		}
 		return null;
 	}));
-	return results.filter((p) => p !== null);
+	return partitionResults(results);
 }
 
-/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 async function extractPackageBinsFromYarnLockfile(content, dir, allowedHosts) {
 	const directDeps = getDirectDependencies(dir);
 	const parsedEntries = parseYarnLockfile(content, ['version']);
@@ -246,33 +303,35 @@ async function extractPackageBinsFromYarnLockfile(content, dir, allowedHosts) {
 		};
 	});
 
-	// Fetch all package bins
 	const binPromises = packageList.map(async ({
 		name,
 		version,
 		line,
 	}) => {
-		const bins = await fetchPackageBins(name, version, allowedHosts);
-		if (bins) {
+		const result = await fetchPackageBins(name, version, allowedHosts);
+		if ('fetchError' in result) {
 			return {
-				name,
-				version,
-				bins,
-				isDirect: directDeps.has(name),
-				line,
+				error: {
+					name, version, error: result.fetchError, line,
+				},
+			};
+		}
+		if (result.bins) {
+			return {
+				pkg: {
+					name, version, bins: result.bins, isDirect: directDeps.has(name), line,
+				},
 			};
 		}
 		return null;
 	});
 
 	const results = await Promise.all(binPromises);
-	return results.filter((p) => p !== null);
+	return partitionResults(results);
 }
 
-/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 async function extractPackageBinsFromPnpmLockfile(content, dir, allowedHosts) {
-	/** @type {PackageBinInfo[]} */
-	const packages = [];
 	const lines = content.split('\n');
 	const directDeps = getDirectDependencies(dir);
 
@@ -322,50 +381,52 @@ async function extractPackageBinsFromPnpmLockfile(content, dir, allowedHosts) {
 		});
 	}
 
-	// Fetch all package bins
 	const binPromises = packageList.map(async ({
 		key,
 		name,
 		version,
 		line,
 	}) => {
-		const bins = await fetchPackageBins(name, version, allowedHosts);
-		if (bins) {
+		const result = await fetchPackageBins(name, version, allowedHosts);
+		if ('fetchError' in result) {
 			return {
-				name: key,
-				version,
-				bins,
-				isDirect: directDeps.has(name),
-				line,
+				error: {
+					name: key, version, error: result.fetchError, line,
+				},
+			};
+		}
+		if (result.bins) {
+			return {
+				pkg: {
+					name: key, version, bins: result.bins, isDirect: directDeps.has(name), line,
+				},
 			};
 		}
 		return null;
 	});
 
 	const results = await Promise.all(binPromises);
-	packages.push(...results.filter((p) => p !== null));
-
-	return packages;
+	return partitionResults(results);
 }
 
-/** @type {(_content: string, _dir: string, _allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/** @type {(_content: string, _dir: string, _allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 // eslint-disable-next-line no-unused-vars
 async function extractPackageBinsFromBunLockfile(_content, _dir, _allowedHosts) {
 	// bun.lock (text format) - doesn't store version information in a parseable way
-	// For now, return empty array
-	return [];
+	// For now, return empty.
+	return { packages: [], errors: [] };
 }
 
-/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 async function extractPackageBinsFromBunLockbBinary(filepath, dir, allowedHosts) {
 	const yarnLockContent = loadBunLockbContent(filepath);
 	if (!yarnLockContent) {
-		return [];
+		return { packages: [], errors: [] };
 	}
 	return extractPackageBinsFromYarnLockfile(yarnLockContent, dir, allowedHosts);
 }
 
-/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 async function extractPackageBinsFromVltLockfile(content, dir, allowedHosts) {
 	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
@@ -391,22 +452,28 @@ async function extractPackageBinsFromVltLockfile(content, dir, allowedHosts) {
 	const results = await Promise.all(candidates.map(async ({
 		member, key, name, version,
 	}) => {
-		const bins = await fetchPackageBins(name, version, allowedHosts);
-		if (bins) {
+		const result = await fetchPackageBins(name, version, allowedHosts);
+		const line = nodeLine(member);
+		if ('fetchError' in result) {
 			return {
-				name: key,
-				version,
-				bins,
-				isDirect: directDeps.has(name),
-				line: nodeLine(member),
+				error: {
+					name: key, version, error: result.fetchError, line,
+				},
+			};
+		}
+		if (result.bins) {
+			return {
+				pkg: {
+					name: key, version, bins: result.bins, isDirect: directDeps.has(name), line,
+				},
 			};
 		}
 		return null;
 	}));
-	return results.filter((p) => p !== null);
+	return partitionResults(results);
 }
 
-/** @type {{ [k in Lockfile]: (s: string, d: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]> }} */
+/** @type {{ [k in Lockfile]: (s: string, d: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult> }} */
 const extracts = {
 	// @ts-expect-error TS doesn't understand dunder proto
 	__proto__: null,
@@ -421,35 +488,34 @@ const extracts = {
 
 /**
  * Extract package bins from virtual lockfile packages
- * @type {(virtualPackages: import('lockfile-tools/virtual').VirtualPackageInfo[], allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>}
+ * @type {(virtualPackages: import('lockfile-tools/virtual').VirtualPackageInfo[], allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>}
  */
 async function extractPackageBinsFromVirtual(virtualPackages, allowedHosts) {
-	/** @type {PackageBinInfo[]} */
-	const packages = [];
-
-	// Fetch bins for each package
 	const binPromises = virtualPackages.map(async ({
 		name,
 		version,
 		isDirect,
 	}) => {
-		const bins = await fetchPackageBins(name, version, allowedHosts);
-		if (bins) {
+		const result = await fetchPackageBins(name, version, allowedHosts);
+		if ('fetchError' in result) {
 			return {
-				name,
-				version,
-				bins,
-				isDirect,
-				line: 0, // Virtual lockfile has no file, so no line number
+				error: {
+					name, version, error: result.fetchError, line: 0,
+				},
+			};
+		}
+		if (result.bins) {
+			return {
+				pkg: {
+					name, version, bins: result.bins, isDirect, line: 0,
+				},
 			};
 		}
 		return null;
 	});
 
 	const results = await Promise.all(binPromises);
-	packages.push(...results.filter((p) => p !== null));
-
-	return packages;
+	return partitionResults(results);
 }
 
 /** @type {import('eslint').Rule.RuleModule} */
@@ -479,6 +545,7 @@ export default {
 			binaryConflict: 'Binary name conflict: "{{binary}}" is provided by multiple packages: {{packages}}',
 			binaryConflictWithPreference: 'Binary name conflict: "{{binary}}" is provided by {{count}} packages. Currently active: {{active}} ({{reason}}). Also provided by: {{others}}',
 			malformedLockfile: 'Lockfile "{{filename}}" is malformed: {{error}}',
+			fetchFailed: 'Failed to fetch manifest for `{{name}}@{{version}}`: {{error}}',
 		},
 	},
 
@@ -495,12 +562,31 @@ export default {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
-				/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+				/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 				const extractPackageBinsFromLockfile = createLockfileExtractor(
 					extracts,
-					/** @type {(filepath: string, ...args: unknown[]) => Promise<PackageBinInfo[]>} */ (extractPackageBinsFromBunLockbBinary),
+					/** @type {(filepath: string, ...args: unknown[]) => Promise<BinsExtractResult>} */ (extractPackageBinsFromBunLockbBinary),
 					makeLockfileContentLoader(context, loadLockfileContent),
+					() => /** @type {Promise<BinsExtractResult>} */ (Promise.resolve({ packages: [], errors: [] })),
 				);
+
+				/** @type {(errs: FetchErrorInfo[]) => void} */
+				const reportFetchErrors = (errs) => {
+					errs.forEach(({
+						name, version, error, line,
+					}) => {
+						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
+						context.report({
+							node,
+							loc,
+							messageId: 'fetchFailed',
+							data: {
+								name, version, error,
+							},
+						});
+					});
+				};
 
 				// Check if any lockfile exists
 				const lockfileExists = hasLockfile(dir);
@@ -508,7 +594,8 @@ export default {
 				// If no lockfile exists, use virtual lockfile from arborist
 				if (!lockfileExists) {
 					const virtualPackages = await buildVirtualLockfile(dir);
-					const packages = await extractPackageBinsFromVirtual(virtualPackages, allowedHosts);
+					const { packages, errors } = await extractPackageBinsFromVirtual(virtualPackages, allowedHosts);
+					reportFetchErrors(errors);
 
 					// Build a map of binary names to packages that provide them
 					/** @type {Map<string, PackageBinInfo[]>} */
@@ -577,15 +664,15 @@ export default {
 				}
 
 				// Process lockfiles sequentially to ensure proper error handling
-				for (let li = 0; li < lockfiles.length; li++) { // eslint-disable-line no-restricted-syntax
+				for (let li = 0; li < lockfiles.length; li++) {
 					const lockfileName = lockfiles[li];
 					const lockfilePath = join(dir, lockfileName);
 
-					/** @type {PackageBinInfo[]} */
-					let packages;
+					/** @type {BinsExtractResult} */
+					let result;
 					try {
 						// eslint-disable-next-line no-await-in-loop
-						packages = await extractPackageBinsFromLockfile(lockfilePath, dir, allowedHosts);
+						result = await extractPackageBinsFromLockfile(lockfilePath, dir, allowedHosts);
 					} catch (e) {
 						context.report({
 							node,
@@ -598,6 +685,9 @@ export default {
 						// eslint-disable-next-line no-continue, no-restricted-syntax
 						continue;
 					}
+
+					reportFetchErrors(result.errors);
+					const { packages } = result;
 
 					// Build a map of binary names to packages that provide them
 					/** @type {Map<string, PackageBinInfo[]>} */
