@@ -1,13 +1,15 @@
 import test from 'tape';
 import { makeLockfileContentLoader } from '../eslint-plugin/utils.mjs';
 
+/** @import { Rule } from 'eslint' */
+
 /**
  * @param {string} filename
  * @param {string} text
- * @returns {import('eslint').Rule.RuleContext}
+ * @returns {Rule.RuleContext}
  */
 function fakeContext(filename, text) {
-	return /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	return /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename,
 		sourceCode: { text },
 	}));
@@ -69,7 +71,7 @@ test('makeLockfileContentLoader - returns null when disk loader returns null', (
 test('makeLockfileContentLoader - falls back to context.getFilename and getSourceCode (legacy ESLint)', (t) => {
 	// On older ESLint where context.filename / context.sourceCode are not set
 	// directly, the loader should call the legacy getter methods.
-	const ctx = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const ctx = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: undefined,
 		sourceCode: undefined,
 		getFilename() { return '/legacy/dir/package-lock.json'; },

@@ -1,5 +1,7 @@
 import { basename } from 'path';
 
+/** @import { Rule } from 'eslint' */
+
 /**
  * Strips the leading `node_modules/` from an npm v2/v3 lockfile package key,
  * so error messages display `@scope/pkg` instead of `node_modules/@scope/pkg`.
@@ -23,10 +25,10 @@ export function stripNodeModulesPrefix(key) {
  * would be corrupted.
  *
  * `loadLockfileContent` is taken as a parameter so callers can import it
- * directly — that keeps esmock-style test mocks intercepting at the rule
+ * directly - that keeps esmock-style test mocks intercepting at the rule
  * boundary effective.
  *
- * @param {import('eslint').Rule.RuleContext} context
+ * @param {Rule.RuleContext} context
  * @param {(filepath: string) => string | null} loadLockfileContent
  * @returns {(lockfilePath: string) => string | null}
  */

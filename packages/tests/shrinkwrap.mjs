@@ -6,6 +6,8 @@ import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Rule } from 'eslint' */
+
 // -- Helper to create a mock pacote --
 /** @type {(manifests: Record<string, { _hasShrinkwrap?: boolean }>) => { manifest: (spec: string, opts?: object) => Promise<object> }} */
 function createMockPacote(manifests) {
@@ -22,7 +24,7 @@ function createMockPacote(manifests) {
 }
 
 // -- Helper to create a mock rule via esmock --
-/** @type {(manifests: Record<string, { _hasShrinkwrap?: boolean }>) => Promise<import('eslint').Rule.RuleModule>} */
+/** @type {(manifests: Record<string, { _hasShrinkwrap?: boolean }>) => Promise<Rule.RuleModule>} */
 async function createMockedRule(manifests) {
 	return esmock('eslint-plugin-lockfile/rules/shrinkwrap.mjs', {}, {
 		pacote: createMockPacote(manifests),
@@ -31,7 +33,7 @@ async function createMockedRule(manifests) {
 
 // -- Helper to invoke the rule directly on a context --
 /**
- * @param {import('eslint').Rule.RuleModule} rule
+ * @param {Rule.RuleModule} rule
  * @param {string} testFile
  * @param {string[]} [ignoreSpecs]
  */

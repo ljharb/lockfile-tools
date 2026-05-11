@@ -5,6 +5,9 @@ import { join } from 'path';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Rule } from 'eslint' */
+/** @import { Program } from 'estree' */
+
 test('integrity rule - valid integrity passes', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
@@ -338,7 +341,7 @@ test('integrity rule - allowed hashing algorithm with wrong hash', async (t) => 
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: join(tmpDir, 'index.js'),
 		options: [['sha512']], // Only allow sha512
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -348,11 +351,11 @@ test('integrity rule - allowed hashing algorithm with wrong hash', async (t) => 
 	}));
 
 	const integrityRuleModule = (await import('eslint-plugin-lockfile/rules/integrity.mjs')).default;
-	const ruleInstance = /** @type {{ Program: (node: import('estree').Program) => Promise<void[]> }} */ (
+	const ruleInstance = /** @type {{ Program: (node: Program) => Promise<void[]> }} */ (
 		/** @type {unknown} */ (integrityRuleModule.create(context))
 	);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	// Package will be downloaded and verified, errors reported for incorrect hash
 	t.equal(reports.length, 1, 'error for incorrect hash, but not for algorithm');

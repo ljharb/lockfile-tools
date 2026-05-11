@@ -6,6 +6,9 @@ import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Rule } from 'eslint' */
+/** @import { Program } from 'estree' */
+
 test('registry rule - yarn.lock processes all packages including last', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
@@ -539,7 +542,7 @@ test('registry rule - virtual lockfile with object config (lines 418-492)', asyn
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			'https://registry.npmjs.org': true,
@@ -552,7 +555,7 @@ test('registry rule - virtual lockfile with object config (lines 418-492)', asyn
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when virtual lockfile uses allowed registry');
 
@@ -589,7 +592,7 @@ test('registry rule - virtual lockfile with wrong registry (lines 478-489)', asy
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			'https://registry.npmjs.org': true,
@@ -602,7 +605,7 @@ test('registry rule - virtual lockfile with wrong registry (lines 478-489)', asy
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 1, 'error reported when virtual lockfile uses wrong registry');
 	t.equal(reports[0].messageId, 'disallowedPackageRegistry', 'correct message ID');
@@ -640,7 +643,7 @@ test('registry rule - virtual lockfile with multiple pattern matches (lines 445-
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			'https://registry1.example.com': ['@myorg/*'],
@@ -654,7 +657,7 @@ test('registry rule - virtual lockfile with multiple pattern matches (lines 445-
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.ok(reports.length > 0, 'error reported for multiple pattern matches in virtual lockfile');
 	t.equal(reports[0].messageId, 'multipleRegistryMatches', 'correct message ID');
@@ -692,7 +695,7 @@ test('registry rule - virtual lockfile with no pattern match (lines 463-476)', a
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			// Config with patterns but no default registry (no true)
@@ -706,7 +709,7 @@ test('registry rule - virtual lockfile with no pattern match (lines 463-476)', a
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.ok(reports.length > 0, 'error reported for package not matching any pattern in virtual lockfile');
 	t.equal(reports[0].messageId, 'disallowedPackageRegistry', 'correct message ID');
@@ -744,7 +747,7 @@ test('registry rule - virtual lockfile with string config (lines 599-602, 608-60
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: ['https://registry.npmjs.org'],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -755,7 +758,7 @@ test('registry rule - virtual lockfile with string config (lines 599-602, 608-60
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.ok(reports.length > 0, 'error reported when virtual lockfile uses disallowed registry with string config');
 	t.equal(reports[0].messageId, 'disallowedRegistry', 'correct message ID');
@@ -800,7 +803,7 @@ test('registry rule - getDefaultRegistry catch branch (line 30)', async (t) => {
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -811,7 +814,7 @@ test('registry rule - getDefaultRegistry catch branch (line 30)', async (t) => {
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	// When execSync fails, default registry becomes https://registry.npmjs.org/
 	// Our lockfile uses that registry, so there should be no errors
@@ -946,7 +949,7 @@ test('registry rule - extract returns null/falsy (|| [] branch in extractRegistr
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: ['https://registry.npmjs.org'],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -957,7 +960,7 @@ test('registry rule - extract returns null/falsy (|| [] branch in extractRegistr
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	// With a mocked getLockfileName returning arbitrary names, the extract will be undefined
 	// and || [] will be hit, resulting in no registries found and no errors
@@ -991,7 +994,7 @@ test('registry rule - bun.lockb with null content (extractRegistriesFromBunLockb
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: ['https://registry.npmjs.org'],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -1002,7 +1005,7 @@ test('registry rule - bun.lockb with null content (extractRegistriesFromBunLockb
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when bun.lockb content is null');
 
@@ -1081,7 +1084,7 @@ test('registry rule - context.getFilename() fallback in object config path', asy
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: undefined,
 		getFilename() { return testFile; },
 		options: [{
@@ -1095,7 +1098,7 @@ test('registry rule - context.getFilename() fallback in object config path', asy
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when using getFilename() fallback with object config');
 
@@ -1138,7 +1141,7 @@ test('registry rule - context.getFilename() fallback in string config path', asy
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: undefined,
 		getFilename() { return testFile; },
 		options: ['https://registry.npmjs.org'],
@@ -1150,7 +1153,7 @@ test('registry rule - context.getFilename() fallback in string config path', asy
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when using getFilename() fallback with string config');
 
@@ -1190,7 +1193,7 @@ test('registry rule - non-Error thrown in object config lockfile path', async (t
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			'https://registry.npmjs.org': true,
@@ -1203,7 +1206,7 @@ test('registry rule - non-Error thrown in object config lockfile path', async (t
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	const malformedReport = reports.find((r) => r.messageId === 'malformedLockfile');
 	t.ok(malformedReport, 'malformedLockfile reported for non-Error thrown');
@@ -1245,7 +1248,7 @@ test('registry rule - non-Error thrown in string config lockfile path', async (t
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: ['https://registry.npmjs.org'],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -1256,7 +1259,7 @@ test('registry rule - non-Error thrown in string config lockfile path', async (t
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	const malformedReport = reports.find((r) => r.messageId === 'malformedLockfile');
 	t.ok(malformedReport, 'malformedLockfile reported for non-Error thrown');
@@ -1295,7 +1298,7 @@ test('registry rule - virtual lockfile string config with allowed registry', asy
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: ['https://registry.npmjs.org'],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -1306,7 +1309,7 @@ test('registry rule - virtual lockfile string config with allowed registry', asy
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when virtual lockfile uses allowed registry with string config');
 
@@ -1343,7 +1346,7 @@ test('registry rule - virtual lockfile string config with getFilename() fallback
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: undefined,
 		getFilename() { return testFile; },
 		options: ['https://registry.npmjs.org'],
@@ -1355,7 +1358,7 @@ test('registry rule - virtual lockfile string config with getFilename() fallback
 
 	const ruleInstance = registryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.ok(reports.length > 0, 'error reported using getFilename() fallback for string config virtual lockfile');
 	t.equal(reports[0].messageId, 'disallowedRegistry', 'correct message ID');

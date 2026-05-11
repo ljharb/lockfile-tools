@@ -6,8 +6,7 @@ import { readFileSync, existsSync } from 'fs';
 import { basename } from 'path';
 import { parse as parseBunLockb } from '@hyrious/bun.lockb';
 
-/** @typedef {import('./lib/package-managers.d.mts').PackageManager} PM */
-/** @typedef {import('./lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { Lockfile, LockfilesFor, PackageManager as PM } from './lib/package-managers.d.mts' */
 
 /** @type {(filepath: string) => string | null} */
 export function loadLockfileContent(filepath) {
@@ -27,7 +26,7 @@ export function loadBunLockbContent(filepath) {
 	return parseBunLockb(buffer);
 }
 
-/** @type {<P extends PM = PM>(filepath: string) => import('./lib/package-managers.d.mts').LockfilesFor<P>} */
+/** @type {<P extends PM = PM>(filepath: string) => LockfilesFor<P>} */
 export function getLockfileName(filepath) {
 	return /** @type {Lockfile} */ (basename(filepath));
 }

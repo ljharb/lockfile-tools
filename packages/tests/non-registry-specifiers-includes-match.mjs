@@ -6,6 +6,9 @@ import { createESLint } from './helpers/eslint-compat.mjs';
 import esmock from 'esmock';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Linter, Rule } from 'eslint' */
+/** @import { Program } from 'estree' */
+
 test('non-registry-specifiers - ignore with substring match in regular lockfile (line 323)', async (t) => {
 	// This tests the .includes() branch of: resolved === entry.specifier || resolved.includes(entry.specifier)
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
@@ -40,7 +43,7 @@ test('non-registry-specifiers - ignore with substring match in regular lockfile 
 	writeFileSync(join(tmpDir, 'package-lock.json'), packageLock);
 	writeFileSync(join(tmpDir, 'index.js'), 'const x = 1;');
 
-	const eslint = createESLint(/** @type {import('eslint').Linter.FlatConfig} */ ({
+	const eslint = createESLint(/** @type {Linter.FlatConfig} */ ({
 		files: ['**/*.js'],
 		plugins: { lockfile: plugin },
 		rules: {
@@ -90,7 +93,7 @@ test('non-registry-specifiers - ignore with substring match in virtual lockfile 
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [{
 			ignore: [{
@@ -107,7 +110,7 @@ test('non-registry-specifiers - ignore with substring match in virtual lockfile 
 
 	const ruleInstance = nonRegistryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors - substring match works in virtual lockfile');
 
@@ -145,7 +148,7 @@ test('non-registry-specifiers - virtual lockfile with HTTP registry (lines 259-2
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -156,7 +159,7 @@ test('non-registry-specifiers - virtual lockfile with HTTP registry (lines 259-2
 
 	const ruleInstance = nonRegistryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 1, 'error reported for HTTP registry in virtual lockfile');
 	t.equal(reports[0].messageId, 'nonHttpsRegistry', 'correct message ID');
@@ -196,7 +199,7 @@ test('non-registry-specifiers - virtual lockfile with non-registry specifier (li
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -207,7 +210,7 @@ test('non-registry-specifiers - virtual lockfile with non-registry specifier (li
 
 	const ruleInstance = nonRegistryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 1, 'error reported for non-registry specifier in virtual lockfile');
 	t.equal(reports[0].messageId, 'nonRegistrySpecifier', 'correct message ID');
@@ -247,7 +250,7 @@ test('non-registry-specifiers - virtual lockfile with package without resolved (
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: testFile,
 		options: [],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -258,7 +261,7 @@ test('non-registry-specifiers - virtual lockfile with package without resolved (
 
 	const ruleInstance = nonRegistryRule.default.create(context);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 0, 'no errors when package has no resolved URL');
 

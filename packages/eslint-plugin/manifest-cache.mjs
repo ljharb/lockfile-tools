@@ -8,12 +8,14 @@
 
 import pacote from 'pacote';
 
-/** @type {Map<string, Promise<import('pacote').Manifest>>} */
+/** @import { Manifest } from 'pacote' */
+
+/** @type {Map<string, Promise<Manifest>>} */
 const inflight = new Map();
 
 /**
  * @param {string} spec - `name@version` style pacote spec
- * @returns {Promise<import('pacote').Manifest>}
+ * @returns {Promise<Manifest>}
  */
 export function getManifest(spec) {
 	const existing = inflight.get(spec);

@@ -1,9 +1,11 @@
+/** @import { PACKAGE_MANAGERS as PackageManagersType } from './package-managers.d.mts' */
+
 /**
  * Centralized definition of package managers and their lockfile configurations.
  * This is the single source of truth for all valid package managers and lockfile names.
  *
  * IMPORTANT: Keep in sync with package-managers.d.mts
- * @type {typeof import('./package-managers.d.mts').PACKAGE_MANAGERS}
+ * @type {typeof PackageManagersType}
  */
 export const PACKAGE_MANAGERS = {
 	npm: {

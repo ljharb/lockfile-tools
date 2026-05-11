@@ -5,6 +5,8 @@ import { join } from 'path';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Rule } from 'eslint' */
+
 test('binary-conflicts rule - malformed package-lock.json does not crash', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
@@ -209,14 +211,14 @@ async function createMockedRule(manifests) {
 
 /**
  * Run the rule's Program handler directly with a mock context
- * @param {import('eslint').Rule.RuleModule} rule - The ESLint rule module
+ * @param {Rule.RuleModule} rule - The ESLint rule module
  * @param {string} testFile - The filename to use in context
  * @returns {Promise<any[]>} - Array of report calls
  */
 async function runRule(rule, testFile) {
 	/** @type {any[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {*} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {*} */ ({
 		filename: testFile,
 		options: [],
 		report(/** @type {object} */ info) { reports.push(info); },
@@ -465,7 +467,7 @@ test('binary-conflicts rule - context.getFilename() fallback', async (t) => {
 	/** @type {object[]} */
 	const reports = [];
 	const testFile = join(tmpDir, 'index.js');
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {*} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {*} */ ({
 		filename: undefined,
 		getFilename() { return testFile; },
 		options: [],

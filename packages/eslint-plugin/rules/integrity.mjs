@@ -26,10 +26,10 @@ import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs'
 const { values } = Object;
 const { parse } = JSON;
 
-/** @typedef {import('lockfile-tools/lib/types.d.ts').PackageInfo} PackageInfo */
-/** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
-/** @typedef {import('lockfile-tools/lib/types.d.ts').LockfileDependenciesRecord} LockfileDependenciesRecord */
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { AST, Rule } from 'eslint' */
+/** @import { Node } from 'estree' */
+/** @import { PackageInfo, RegistryURL } from 'lockfile-tools/lib/types.d.ts' */
+/** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
 
 /** @type {(content: string) => PackageInfo[]} */
 function extractPackagesFromNpmLockfile(content) {
@@ -340,7 +340,7 @@ async function getTarball(resolved) {
 	return downloadTarball(resolved);
 }
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
@@ -381,7 +381,7 @@ export default {
 
 		/**
 		 * Process a single package entry and report any issues
-		 * @param {import('estree').Node} node
+		 * @param {Node} node
 		 * @param {string} filename
 		 * @param {PackageInfo & { resolved: RegistryURL }} pkg
 		 */
@@ -393,7 +393,7 @@ export default {
 				line,
 			} = pkg;
 
-			/** @type {import('eslint').AST.SourceLocation | undefined} */
+			/** @type {AST.SourceLocation | undefined} */
 			const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 			if (!integrity) {
@@ -473,7 +473,7 @@ export default {
 
 		/**
 		 * Process a single lockfile and report any issues
-		 * @param {import('estree').Node} node
+		 * @param {Node} node
 		 * @param {(filepath: string) => PackageInfo[]} extractPackagesFromLockfile
 		 * @param {string} dir
 		 * @param {string} filename
@@ -503,7 +503,7 @@ export default {
 
 			// Report errors for packages without resolved URL (missing both resolved and integrity)
 			unresolvedPackages.forEach((pkg) => {
-				/** @type {import('eslint').AST.SourceLocation | undefined} */
+				/** @type {AST.SourceLocation | undefined} */
 				const loc = pkg.line ? { start: { line: pkg.line, column: 0 }, end: { line: pkg.line, column: 0 } } : undefined;
 				if (!pkg.integrity) {
 					context.report({

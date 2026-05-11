@@ -19,8 +19,8 @@ import {
 } from 'lockfile-tools/json-ast';
 import { makeLockfileContentLoader } from '../utils.mjs';
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PackageManager */
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { Rule } from 'eslint' */
+/** @import { Lockfile, PackageManager } from 'lockfile-tools/lib/package-managers.d.mts' */
 
 const { isArray } = Array;
 
@@ -107,7 +107,7 @@ function getLockfileVersion(filepath, manager, getContent) {
 	throw new SyntaxError('should never reach here');
 }
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',

@@ -17,7 +17,8 @@ const {
 	values,
 } = Object;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
+/** @import { ESLint as ESLintNS, Linter } from 'eslint' */
+/** @import { PackageManager as PM } from 'lockfile-tools/lib/package-managers.d.mts' */
 
 /** @type {string[]} */
 const LOCKFILE_NAMES = values(PACKAGE_MANAGERS).flatMap((pm) => pm.lockfiles);
@@ -69,10 +70,10 @@ function resolveTarget(lockfilePath) {
  * Configures ESLint rules based on options
  * @param {{ flavor?: string[], registry?: string[], algorithms?: string[] }} options
  * @param {PM | null} detectedFlavor
- * @returns {import('eslint').Linter.RulesRecord}
+ * @returns {Linter.RulesRecord}
  */
 function configureRules(options, detectedFlavor) {
-	/** @type {import('eslint').Linter.RulesRecord} */
+	/** @type {Linter.RulesRecord} */
 	const rules = { ...plugin.configs.recommended.rules };
 
 	if (options.flavor && options.flavor.length > 0) {
@@ -118,7 +119,7 @@ export async function lintLockfile(lockfilePath, options = {}) {
 	try {
 		const rules = configureRules(options, detectedFlavor);
 
-		/** @type {import('eslint').ESLint.Options} */
+		/** @type {ESLintNS.Options} */
 		let eslintOptions;
 		if (eslintMajorVersion >= 9) {
 			// ESLint 9+ uses flat config
@@ -158,10 +159,10 @@ export async function lintLockfile(lockfilePath, options = {}) {
 			writeFileSync(lintTarget, '// Temporary file for eslint-plugin-lockfile\n', { flag: 'wx' });
 			tempFileCreated = true;
 
-			eslintOptions = /** @type {import('eslint').ESLint.Options} */ ({
+			eslintOptions = /** @type {ESLintNS.Options} */ ({
 				useEslintrc: false,
 				plugins: { lockfile: plugin },
-				overrideConfig: /** @type {import('eslint').Linter.LegacyConfig} */ ({
+				overrideConfig: /** @type {Linter.LegacyConfig} */ ({
 					plugins: ['lockfile'],
 					parserOptions: {
 						ecmaVersion: 2022,
@@ -215,7 +216,7 @@ export async function lintLockfile(lockfilePath, options = {}) {
 				if (lstatSync(lintTarget).isFile()) {
 					rmSync(lintTarget);
 				}
-			} catch { /* file missing — fine */ }
+			} catch { /* file missing == fine */ }
 		}
 	}
 }

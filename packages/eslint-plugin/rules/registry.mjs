@@ -27,9 +27,9 @@ import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
 const { from, isArray } = Array;
 const { values } = Object;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
-/** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { AST, Rule } from 'eslint' */
+/** @import { RegistryURL } from 'lockfile-tools/lib/types.d.ts' */
+/** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
 /** @typedef {{ name: string, registry: RegistryURL, line: number }} PackageRegistry */
 
 function getDefaultRegistry() {
@@ -310,7 +310,7 @@ function extractPackageRegistriesFromLockfile(filepath, getContent) {
 	return [];
 }
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
@@ -527,7 +527,7 @@ export default {
 								}
 							});
 
-							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							/** @type {AST.SourceLocation | undefined} */
 							const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 							// Check for multiple pattern matches
@@ -653,7 +653,7 @@ export default {
 
 					registries.forEach(({ registry, line }) => {
 						if (!normalizedAllowed.includes(registry)) {
-							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							/** @type {AST.SourceLocation | undefined} */
 							const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 							context.report({
 								node,

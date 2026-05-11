@@ -35,7 +35,10 @@ import { makeLockfileContentLoader } from '../utils.mjs';
 const { values, entries } = Object;
 const { parse } = JSON;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
+/** @import { Result } from 'npm-package-arg' */
+/** @import { VirtualPackageInfo } from 'lockfile-tools/virtual' */
+/** @import { AST, Rule } from 'eslint' */
 
 /**
  * @typedef {Object} PackageBinInfo
@@ -58,7 +61,7 @@ const { parse } = JSON;
  * Returns the host portion of a non-registry spec, or null if it can't be
  * extracted. Used to honor a host allowlist for git/remote specs without
  * blocking ordinary registry traffic.
- * @type {(parsed: import('npm-package-arg').Result) => string | null}
+ * @type {(parsed: Result) => string | null}
  */
 function getSpecHost(parsed) {
 	if (parsed.type === 'git') {
@@ -86,7 +89,7 @@ function getSpecHost(parsed) {
  * Returns true if `version` is safe to forward to pacote under the given
  * allowlist policy:
  * - `allowedHosts === null` → no gating (default; pacote sees every spec).
- * - registry-style specs (version/range/tag/alias) always pass — those go
+ * - registry-style specs (version/range/tag/alias) always pass - those go
  *   to the configured npm registry, not a lockfile-controlled host.
  * - git/remote specs must have a host listed in `allowedHosts`.
  * - file/directory specs must match a `file:<glob>` entry in `allowedHosts`
@@ -172,8 +175,7 @@ async function fetchPackageBins(packageName, version, allowedHosts) {
 	} catch (e) {
 		const code = /** @type {{ code?: unknown }} */ (e)?.code;
 		if (code === 'E404') {
-			// Package not present in the registry — that's a legitimate
-			// outcome for a lockfile with non-published or removed packages.
+			// Package not present in the registry - that's a legitimate outcome for a lockfile with non-published or removed packages.
 			return { bins: null };
 		}
 		return { fetchError: e instanceof Error ? e.message : String(e) };
@@ -488,7 +490,7 @@ const extracts = {
 
 /**
  * Extract package bins from virtual lockfile packages
- * @type {(virtualPackages: import('lockfile-tools/virtual').VirtualPackageInfo[], allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>}
+ * @type {(virtualPackages: VirtualPackageInfo[], allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>}
  */
 async function extractPackageBinsFromVirtual(virtualPackages, allowedHosts) {
 	const binPromises = virtualPackages.map(async ({
@@ -518,7 +520,7 @@ async function extractPackageBinsFromVirtual(virtualPackages, allowedHosts) {
 	return partitionResults(results);
 }
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
@@ -575,7 +577,7 @@ export default {
 					errs.forEach(({
 						name, version, error, line,
 					}) => {
-						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						/** @type {AST.SourceLocation | undefined} */
 						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 						context.report({
 							node,
@@ -617,7 +619,7 @@ export default {
 							const directProviders = providers.filter((p) => p.isDirect);
 							// Use the first provider's line number for the error location (0 for virtual)
 							const firstLine = providers[0].line;
-							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							/** @type {AST.SourceLocation | undefined} */
 							/* istanbul ignore next - tested via esmock; truthy branch requires binary conflict in real lockfile */
 							const loc = firstLine ? { start: { line: firstLine, column: 0 }, end: { line: firstLine, column: 0 } } : undefined;
 
@@ -709,7 +711,7 @@ export default {
 							const directProviders = providers.filter((p) => p.isDirect);
 							// Use the first provider's line number for the error location
 							const firstLine = providers[0].line;
-							/** @type {import('eslint').AST.SourceLocation | undefined} */
+							/** @type {AST.SourceLocation | undefined} */
 							const loc = firstLine ? { start: { line: firstLine, column: 0 }, end: { line: firstLine, column: 0 } } : undefined;
 
 							if (directProviders.length === 1) {

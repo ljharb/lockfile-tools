@@ -4,7 +4,7 @@
 
 import { loadLockfileContent, getLockfileName } from './io.mjs';
 
-/** @typedef {import('./lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { Lockfile } from './lib/package-managers.d.mts' */
 
 /**
  * @typedef {Object} YarnLockfileEntry

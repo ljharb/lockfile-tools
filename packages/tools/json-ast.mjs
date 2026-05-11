@@ -7,14 +7,10 @@
 
 import { parse } from '@humanwhocodes/momoa';
 
-/** @typedef {import('@humanwhocodes/momoa').DocumentNode} DocumentNode */
-/** @typedef {import('@humanwhocodes/momoa').ObjectNode} ObjectNode */
-/** @typedef {import('@humanwhocodes/momoa').MemberNode} MemberNode */
-/** @typedef {import('@humanwhocodes/momoa').ValueNode} ValueNode */
+/** @import { DocumentNode, ObjectNode, MemberNode, ValueNode } from '@humanwhocodes/momoa' */
 
 /**
- * Parse JSON text into a momoa Document. Throws on malformed input — callers
- * should treat that the same as JSON.parse failure.
+ * Parse JSON text into a momoa Document. Throws on malformed input - callers should treat that the same as JSON.parse failure.
  * @param {string} text
  * @returns {DocumentNode}
  */

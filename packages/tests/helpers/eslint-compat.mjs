@@ -8,11 +8,13 @@ import { ESLint } from 'eslint';
 const eslintVersion = ESLint.version;
 const majorVersion = parseInt(eslintVersion.split('.')[0], 10);
 
+/** @import { ESLint as ESLintNS, Linter } from 'eslint' */
+
 /**
  * Creates ESLint options compatible with both ESLint 8 and ESLint 9
- * @param {import('eslint').Linter.FlatConfig} overrideConfig - The flat config to use
+ * @param {Linter.FlatConfig} overrideConfig - The flat config to use
  * @param {string} cwd - The working directory
- * @returns {import('eslint').ESLint.Options}
+ * @returns {ESLintNS.Options}
  */
 export function createESLintOptions(overrideConfig, cwd) {
 	if (majorVersion >= 9) {
@@ -33,7 +35,7 @@ export function createESLintOptions(overrideConfig, cwd) {
 	// Convert flat config plugins to legacy format
 	/** @type {string[]} */
 	const pluginNames = [];
-	/** @type {Record<string, import('eslint').ESLint.Plugin>} */
+	/** @type {Record<string, ESLintNS.Plugin>} */
 	const pluginsMap = {};
 
 	if (plugins) {
@@ -46,10 +48,10 @@ export function createESLintOptions(overrideConfig, cwd) {
 	// In ESLint 8, rules need to be at the root level of overrideConfig
 	// The plugins array in overrideConfig is just plugin names as strings
 	// We also need to set parserOptions.ecmaVersion for modern JS syntax
-	return /** @type {import('eslint').ESLint.Options} */ ({
+	return /** @type {ESLintNS.Options} */ ({
 		useEslintrc: false,
 		plugins: pluginsMap,
-		overrideConfig: /** @type {import('eslint').Linter.LegacyConfig} */ ({
+		overrideConfig: /** @type {Linter.LegacyConfig} */ ({
 			plugins: pluginNames,
 			parserOptions: {
 				ecmaVersion: 2022,
@@ -62,7 +64,7 @@ export function createESLintOptions(overrideConfig, cwd) {
 
 /**
  * Creates an ESLint instance with options compatible with both ESLint 8 and ESLint 9
- * @param {import('eslint').Linter.FlatConfig} config - The flat config to use
+ * @param {Linter.FlatConfig} config - The flat config to use
  * @param {string} cwd - The working directory
  * @returns {ESLint}
  */

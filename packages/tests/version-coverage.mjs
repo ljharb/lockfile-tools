@@ -6,6 +6,8 @@ import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
+/** @import { Rule } from 'eslint' */
+
 test('version rule - null config skips version validation', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
@@ -111,7 +113,7 @@ test('version rule - array of allowed versions with wrong version', async (t) =>
 });
 
 /**
- * @param {import('eslint').Rule.RuleModule} rule
+ * @param {Rule.RuleModule} rule
  * @param {string} testFile
  * @param {object} [options]
  * @returns {{ messageId?: string; data?: Record<string, unknown> }[]}

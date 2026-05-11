@@ -6,15 +6,13 @@ import { forEachMember, getMember } from './json-ast.mjs';
 
 const { entries } = Object;
 
-/** @typedef {import('./lib/types.d.ts').LockfileDependenciesRecord} LockfileDependenciesRecord */
-/** @typedef {import('@humanwhocodes/momoa').ObjectNode} ObjectNode */
-/** @typedef {import('@humanwhocodes/momoa').MemberNode} MemberNode */
-/** @typedef {import('@humanwhocodes/momoa').ValueNode} ValueNode */
+/** @import { LockfileDependencyEntry, LockfileDependenciesRecord } from './lib/types.d.ts' */
+/** @import { MemberNode, ValueNode } from '@humanwhocodes/momoa' */
 
 /**
  * Recursively traverses npm lockfile v1 dependencies
  * @param {LockfileDependenciesRecord} deps - Dependencies object
- * @param {(name: string, dep: import('./lib/types.d.ts').LockfileDependencyEntry) => void} callback - Called for each dependency
+ * @param {(name: string, dep: LockfileDependencyEntry) => void} callback - Called for each dependency
  * @param {string} [prefix=''] - Current path prefix for nested dependencies
  */
 export function traverseDependencies(deps, callback, prefix = '') {

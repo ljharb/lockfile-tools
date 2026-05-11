@@ -30,7 +30,9 @@ import { makeLockfileContentLoader } from '../utils.mjs';
 
 const { values } = Object;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { AST, Rule } from 'eslint' */
+/** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
+/** @import { Result } from 'npm-package-arg' */
 
 /**
  * @typedef {Object} PackageEntry
@@ -41,7 +43,7 @@ const { values } = Object;
 
 /**
  * Check if a package name@version is ignored by any entry in the ignore list
- * @type {(packageName: string, version: string, ignoreList: import('npm-package-arg').Result[]) => boolean}
+ * @type {(packageName: string, version: string, ignoreList: Result[]) => boolean}
  */
 function isIgnored(packageName, version, ignoreList) {
 	return ignoreList.some((parsed) => (
@@ -57,7 +59,7 @@ function isIgnored(packageName, version, ignoreList) {
  * Returns the host portion of a non-registry spec, or null if it can't be
  * extracted. Used to honor a host allowlist for git/remote specs without
  * blocking ordinary registry traffic.
- * @type {(parsed: import('npm-package-arg').Result) => string | null}
+ * @type {(parsed: Result) => string | null}
  */
 function getSpecHost(parsed) {
 	if (parsed.type === 'git') {
@@ -85,7 +87,7 @@ function getSpecHost(parsed) {
  * Returns true if `version` is safe to forward to pacote under the given
  * allowlist policy:
  * - `allowedHosts === null` → no gating (default; pacote sees every spec).
- * - registry-style specs (version/range/tag/alias) always pass — those go
+ * - registry-style specs (version/range/tag/alias) always pass - those go
  *   to the configured npm registry, not a lockfile-controlled host.
  * - git/remote specs must have a host listed in `allowedHosts`.
  * - file/directory specs must match a `file:<glob>` entry in `allowedHosts`
@@ -353,7 +355,7 @@ const extracts = {
 	'vlt-lock.json': extractPackagesFromVltLockfile,
 };
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
@@ -406,14 +408,14 @@ export default {
 		return {
 			async Program(node) {
 				// Parse and validate ignore entries
-				/** @type {import('npm-package-arg').Result[] | null} */
+				/** @type {Result[] | null} */
 				const parsedIgnoreList = ignoreSpecs.reduce(
-					/** @type {(acc: import('npm-package-arg').Result[] | null, specifier: string) => import('npm-package-arg').Result[] | null} */
+					/** @type {(acc: Result[] | null, specifier: string) => Result[] | null} */
 					(acc, specifier) => {
 						if (!acc) {
 							return null;
 						}
-						/** @type {import('npm-package-arg').Result} */
+						/** @type {Result} */
 						let parsed;
 						try {
 							parsed = npa(specifier);
@@ -450,9 +452,9 @@ export default {
 							});
 							return null;
 						}
-						return /** @type {import('npm-package-arg').Result[]} */ ([]).concat(acc, parsed);
+						return /** @type {Result[]} */ ([]).concat(acc, parsed);
 					},
-					/** @type {import('npm-package-arg').Result[]} */ ([]),
+					/** @type {Result[]} */ ([]),
 				);
 				if (!parsedIgnoreList) {
 					return;
@@ -551,7 +553,7 @@ export default {
 						line,
 						result,
 					}) => {
-						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						/** @type {AST.SourceLocation | undefined} */
 						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : void undefined;
 						if ('fetchError' in result) {
 							context.report({

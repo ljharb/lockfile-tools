@@ -70,11 +70,8 @@ Examples of **correct** code for this rule:
 ## Error Messages
 
 The rule provides different error messages based on the conflict scenario.
-It also reports a `fetchFailed` diagnostic when `pacote.manifest` fails with
-anything other than a 404 (e.g., network timeout, 5xx). A 404 is treated as an
-intentional skip — that's a legitimate outcome for a lockfile entry that's no
-longer published — but other errors are surfaced so CI doesn't silently pass
-when the registry is unreachable.
+It also reports a `fetchFailed` diagnostic when `pacote.manifest` fails with anything other than a 404 (e.g., network timeout, 5xx).
+A 404 is treated as an intentional skip - that's a legitimate outcome for a lockfile entry that's no longer published - but other errors are surfaced so CI doesn't silently pass when the registry is unreachable.
 
 ### Multiple direct dependencies with the same binary
 
@@ -94,11 +91,10 @@ When exactly one package is a direct dependency, the rule indicates that this pa
 
 ### `allowedHosts`
 
-By default, this rule passes every package spec — including `git+https://…`,
-remote tarball URLs, and aliases — to `pacote.manifest`, which will fetch from
-the URL specified in the lockfile. When linting lockfiles you do not fully
-trust (for example, in CI on a PR), set `allowedHosts` to restrict which hosts
-`pacote` may contact for non-registry specs:
+By default, this rule passes every package spec
+(including `git+https://…`, remote tarball URLs, and aliases)
+to `pacote.manifest`, which will fetch from the URL specified in the lockfile.
+When linting lockfiles you do not fully trust (for example, in CI on a PR), set `allowedHosts` to restrict which hosts `pacote` may contact for non-registry specs:
 
 ```json
 {
@@ -112,15 +108,9 @@ trust (for example, in CI on a PR), set `allowedHosts` to restrict which hosts
 
 Behavior:
 
-- Registry specs (semver `version`/`range`/`tag` and `npm:` aliases) are always
-  allowed — they resolve through the configured npm registry, not the lockfile.
-- `git+…` and remote tarball specs are passed to `pacote` only when their host
-  appears in `allowedHosts`.
-- Local `file:` specs (both file tarballs and directory specs) are allowed when
-  the path portion matches a `file:<glob>` entry in `allowedHosts`. The glob is
-  evaluated with [minimatch](https://www.npmjs.com/package/minimatch); use
-  `file:**` to allow all local specs, or e.g. `file:./packages/**` to scope
-  permission to a subtree.
+- Registry specs (semver `version`/`range`/`tag` and `npm:` aliases) are always allowed - they resolve through the configured npm registry, not the lockfile.
+- `git+…` and remote tarball specs are passed to `pacote` only when their host appears in `allowedHosts`.
+- Local `file:` specs (both file tarballs and directory specs) are allowed when the path portion matches a `file:<glob>` entry in `allowedHosts`. The glob is evaluated with [minimatch](https://www.npmjs.com/package/minimatch); use `file:**` to allow all local specs, or e.g. `file:./packages/**` to scope permission to a subtree.
 - An empty array (`"allowedHosts": []`) blocks every non-registry spec.
 
 ## When Not To Use It

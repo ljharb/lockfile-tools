@@ -6,7 +6,9 @@ import esmock from 'esmock';
 import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 
-/** @type {(rule: import('eslint').Rule.RuleModule, testFile: string, options?: unknown[]) => Promise<{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]>} */
+/** @import { Rule } from 'eslint' */
+
+/** @type {(rule: Rule.RuleModule, testFile: string, options?: unknown[]) => Promise<{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]>} */
 async function runRule(rule, testFile, options) {
 	/** @type {{ messageId?: string; data?: Record<string, unknown>; loc?: unknown }[]} */
 	const reports = [];

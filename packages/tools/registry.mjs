@@ -1,4 +1,4 @@
-/** @typedef {import('./lib/types.d.ts').RegistryURL} RegistryURL */
+/** @import { RegistryURL } from './lib/types.d.ts' */
 
 /**
  * Normalizes a registry URL by removing trailing slashes

@@ -28,8 +28,9 @@ import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs'
 
 const { values } = Object;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
-/** @typedef {import('lockfile-tools/lib/types.d.ts').RegistryURL} RegistryURL */
+/** @import { AST, Rule } from 'eslint' */
+/** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
+/** @import { RegistryURL } from 'lockfile-tools/lib/types.d.ts' */
 
 /**
  * @typedef {Object} IgnoreEntry
@@ -39,7 +40,7 @@ const { values } = Object;
 
 /** @typedef {{ name: string, resolved: string | null, line: number }} DependencyInfo */
 
-/** @type {(url: string) => boolean} */
+/** @type {(url: string) => url is RegistryURL} */
 function isRegistryUrl(url) {
 	// Registry URLs should be http:// or https:// URLs pointing to a package tarball
 	if (!(/^https?:\/\//).test(url)) {
@@ -182,7 +183,7 @@ const extracts = {
 	'vlt-lock.json': extractDepsFromVltLockfile,
 };
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',
@@ -322,7 +323,7 @@ export default {
 							return;
 						}
 
-						/** @type {import('eslint').AST.SourceLocation | undefined} */
+						/** @type {AST.SourceLocation | undefined} */
 						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 						// Check if this dependency is in the ignore list; entry is inferred from ignore array

@@ -6,6 +6,9 @@ import { createESLint } from './helpers/eslint-compat.mjs';
 import plugin from 'eslint-plugin-lockfile';
 import integrityRule from 'eslint-plugin-lockfile/rules/integrity.mjs';
 
+/** @import { Rule } from 'eslint' */
+/** @import { Program } from 'estree' */
+
 test('flavor rule - no lockfiles present', async (t) => {
 	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
 
@@ -141,7 +144,7 @@ test('integrity rule - nested dependencies with wrong hashes', async (t) => {
 
 	/** @type {{ messageId?: string; data?: Record<string, unknown> }[]} */
 	const reports = [];
-	const context = /** @type {import('eslint').Rule.RuleContext} */ (/** @type {unknown} */ ({
+	const context = /** @type {Rule.RuleContext} */ (/** @type {unknown} */ ({
 		filename: join(tmpDir, 'index.js'),
 		options: [],
 		/** @param {{ messageId?: string; data?: Record<string, unknown> }} info */
@@ -150,11 +153,11 @@ test('integrity rule - nested dependencies with wrong hashes', async (t) => {
 		},
 	}));
 
-	const ruleInstance = /** @type {{ Program: (node: import('estree').Program) => Promise<void[]> }} */ (
+	const ruleInstance = /** @type {{ Program: (node: Program) => Promise<void[]> }} */ (
 		/** @type {unknown} */ (integrityRule.create(context))
 	);
 	// eslint-disable-next-line new-cap
-	await ruleInstance.Program(/** @type {import('estree').Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
+	await ruleInstance.Program(/** @type {Program} */ (/** @type {unknown} */ ({ type: 'Program' })));
 
 	t.equal(reports.length, 2, 'errors reported for wrong integrity hashes');
 	t.ok(reports.some((r) => r.messageId === 'incorrectIntegrity' && r.data?.name === 'has-flag'), 'error for has-flag incorrect integrity');

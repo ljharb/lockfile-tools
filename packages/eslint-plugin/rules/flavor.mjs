@@ -35,11 +35,12 @@ import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 const { from } = Array;
 const { keys, values } = Object;
 
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').PackageManager} PM */
-/** @typedef {import('lockfile-tools/lib/package-managers.d.mts').Lockfile} Lockfile */
+/** @import { Rule } from 'eslint' */
+/** @import { PackageManager as PM, Lockfile, LockfilesFor } from 'lockfile-tools/lib/package-managers.d.mts' */
+
 /** @typedef {{ name: PM, files: true | string[] }} PMObj */
 
-/** @type {<P extends PM = PM>(s: string) => s is import('lockfile-tools/lib/package-managers.d.mts').LockfilesFor<P>} */
+/** @type {<P extends PM = PM>(s: string) => s is LockfilesFor<P>} */
 function isValidLockfile(s) {
 	return values(PACKAGE_MANAGERS).some((pm) => pm.lockfiles.some((lf) => lf === s));
 }
@@ -95,7 +96,7 @@ function getAllowedLockfiles(allowedManagers) {
 
 const pms = /** @type {PM[]} */ (keys(PACKAGE_MANAGERS));
 
-/** @type {import('eslint').Rule.RuleModule} */
+/** @type {Rule.RuleModule} */
 export default {
 	meta: {
 		type: 'problem',

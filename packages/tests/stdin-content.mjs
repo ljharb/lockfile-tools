@@ -57,7 +57,7 @@ test('version rule - prefers piped content over on-disk version', async (t) => {
 			},
 		}, tmpDir);
 
-		// Pipe a v2 lockfile — should be reported as wrong even though disk is v3.
+		// Pipe a v2 lockfile - should be reported as wrong even though disk is v3.
 		const piped = JSON.stringify({ lockfileVersion: 2 });
 		const results = await eslint.lintText(piped, {
 			filePath: join(tmpDir, 'package-lock.json'),
