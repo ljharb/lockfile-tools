@@ -169,9 +169,15 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
  * @param {Object.<Lockfile, (content: string, ...args: unknown[]) => T>} extractors - Map of lockfile names to extractor functions
  * @param {((filepath: string, ...args: unknown[]) => T) | null} [bunLockbExtractor] - Special extractor for binary bun.lockb
  * @param {(filepath: string) => string | null} [getContent] - Optional content loader; defaults to reading from disk
+ * @param {() => T} [makeEmpty] - Factory for the value returned when no content / no extractor is available; defaults to an empty array (back-compat).
  * @returns {(filepath: string, ...args: unknown[]) => T}
  */
-export function createLockfileExtractor(extractors, bunLockbExtractor = null, getContent = loadLockfileContent) {
+export function createLockfileExtractor(
+	extractors,
+	bunLockbExtractor = null,
+	getContent = loadLockfileContent,
+	makeEmpty = /** @type {() => T} */ (() => /** @type {T} */ ([])),
+) {
 	return function (filepath, ...args) {
 		const filename = getLockfileName(filepath);
 
@@ -182,11 +188,11 @@ export function createLockfileExtractor(extractors, bunLockbExtractor = null, ge
 
 		const content = getContent(filepath);
 		if (!content) {
-			return /** @type {T} */ ([]);
+			return makeEmpty();
 		}
 
 		const extractor = extractors[filename];
 		/* istanbul ignore next - defensive: unknown lockfile types not in extractors map */
-		return extractor?.(content, ...args) || /** @type {T} */ ([]);
+		return extractor?.(content, ...args) || makeEmpty();
 	};
 }
