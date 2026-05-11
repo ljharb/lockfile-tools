@@ -1,4 +1,4 @@
-import { execSync } from 'child_process';
+import { execSync, execFileSync } from 'child_process';
 
 const {
 	npm_package_version: version,
@@ -20,19 +20,25 @@ if (prefix === cwd) {
 
 	execSync('git add package.json CHANGELOG.md', { stdio: 'inherit' });
 
-	const messageTemplate = execSync(
-		'npm --no-workspaces config get message',
+	const messageTemplate = execFileSync(
+		'npm',
+		['--no-workspaces', 'config', 'get', 'message'],
 		{ cwd, encoding: 'utf-8' },
 	).trim().replaceAll('%s', version);
 
-	execSync(`git commit -m "${messageTemplate}"`, { stdio: 'inherit' });
+	execFileSync('git', ['commit', '-m', messageTemplate], { stdio: 'inherit' });
 
-	const tagPrefix = JSON.parse(execSync(
-		'npm --no-workspaces pkg get auto-changelog.tagPrefix',
+	const tagPrefix = JSON.parse(execFileSync(
+		'npm',
+		['--no-workspaces', 'pkg', 'get', 'auto-changelog.tagPrefix'],
 		{ cwd, encoding: 'utf-8' },
 	).trim() ?? 'v');
 
-	execSync(`git tag -a "${tagPrefix}${version}" -m "${messageTemplate}"`, { stdio: 'inherit' });
+	if (!(/^[A-Za-z0-9._@/-]*$/).test(tagPrefix)) {
+		throw new Error(`refusing to release: auto-changelog.tagPrefix contains unsafe characters: ${JSON.stringify(tagPrefix)}`);
+	}
+
+	execFileSync('git', ['tag', '-a', `${tagPrefix}${version}`, '-m', messageTemplate], { stdio: 'inherit' });
 } else {
 	console.error('rerun with --no-workspaces to avoid workspace side effects');
 	execSync('git checkout -- package.json');
