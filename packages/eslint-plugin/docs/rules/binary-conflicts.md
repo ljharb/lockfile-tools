@@ -85,6 +85,39 @@ Binary name conflict: `my-cli` is provided by 2 packages. Currently active: pack
 
 When exactly one package is a direct dependency, the rule indicates that this package will likely be the active one, though this is still not guaranteed across all package managers.
 
+## Options
+
+### `allowedHosts`
+
+By default, this rule passes every package spec — including `git+https://…`,
+remote tarball URLs, and aliases — to `pacote.manifest`, which will fetch from
+the URL specified in the lockfile. When linting lockfiles you do not fully
+trust (for example, in CI on a PR), set `allowedHosts` to restrict which hosts
+`pacote` may contact for non-registry specs:
+
+```json
+{
+  "rules": {
+    "lockfile/binary-conflicts": ["error", {
+      "allowedHosts": ["github.com", "gitlab.com"]
+    }]
+  }
+}
+```
+
+Behavior:
+
+- Registry specs (semver `version`/`range`/`tag` and `npm:` aliases) are always
+  allowed — they resolve through the configured npm registry, not the lockfile.
+- `git+…` and remote tarball specs are passed to `pacote` only when their host
+  appears in `allowedHosts`.
+- Local `file:` specs (both file tarballs and directory specs) are allowed when
+  the path portion matches a `file:<glob>` entry in `allowedHosts`. The glob is
+  evaluated with [minimatch](https://www.npmjs.com/package/minimatch); use
+  `file:**` to allow all local specs, or e.g. `file:./packages/**` to scope
+  permission to a subtree.
+- An empty array (`"allowedHosts": []`) blocks every non-registry spec.
+
 ## When Not To Use It
 
 - If you're aware of binary conflicts in your dependencies and have verified which binary will be used

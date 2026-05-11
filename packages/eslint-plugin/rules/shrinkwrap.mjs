@@ -11,6 +11,7 @@ This rule uses pacote to fetch package manifests without requiring node_modules 
 import { dirname, join } from 'path';
 import npa from 'npm-package-arg';
 import pacote from 'pacote';
+import { minimatch } from 'minimatch';
 import { satisfies } from 'semver';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
@@ -53,10 +54,92 @@ function isIgnored(packageName, version, ignoreList) {
 }
 
 /**
- * Check if a package has an npm-shrinkwrap.json via its manifest
- * @type {(packageName: string, version: string) => Promise<boolean | null>}
+ * Returns the host portion of a non-registry spec, or null if it can't be
+ * extracted. Used to honor a host allowlist for git/remote specs without
+ * blocking ordinary registry traffic.
+ * @type {(parsed: import('npm-package-arg').Result) => string | null}
  */
-async function hasShrinkwrap(packageName, version) {
+function getSpecHost(parsed) {
+	if (parsed.type === 'git') {
+		const { hosted } = /** @type {{ hosted?: { domain?: string } }} */ (parsed);
+		if (hosted && typeof hosted.domain === 'string') {
+			return hosted.domain;
+		}
+		try {
+			return new URL(parsed.rawSpec.replace(/^git\+/, '')).host || null;
+		} catch {
+			return null;
+		}
+	}
+	if (parsed.type === 'remote') {
+		try {
+			return new URL(/** @type {string} */ (parsed.fetchSpec)).host || null;
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+/**
+ * Returns true if `version` is safe to forward to pacote under the given
+ * allowlist policy:
+ * - `allowedHosts === null` → no gating (default; pacote sees every spec).
+ * - registry-style specs (version/range/tag/alias) always pass — those go
+ *   to the configured npm registry, not a lockfile-controlled host.
+ * - git/remote specs must have a host listed in `allowedHosts`.
+ * - file/directory specs must match a `file:<glob>` entry in `allowedHosts`
+ *   (matched against the path portion of `rawSpec` via minimatch).
+ * - anything unparseable is rejected.
+ * @type {(version: string, allowedHosts: readonly string[] | null) => boolean}
+ */
+function isAllowedSpec(version, allowedHosts) {
+	if (allowedHosts === null) {
+		return true;
+	}
+	try {
+		const parsed = npa.resolve('x', version);
+		if (parsed.type === 'version' || parsed.type === 'range' || parsed.type === 'tag') {
+			return true;
+		}
+		if (parsed.type === 'alias') {
+			const sub = /** @type {{ subSpec?: { rawSpec: string } }} */ (parsed).subSpec;
+			return !!sub && isAllowedSpec(sub.rawSpec, allowedHosts);
+		}
+		if (parsed.type === 'git' || parsed.type === 'remote') {
+			const host = getSpecHost(parsed);
+			return !!host && allowedHosts.includes(host);
+		}
+		if (parsed.type === 'file' || parsed.type === 'directory') {
+			// npa only recognizes `file:` as the input prefix; `type` is then
+			// refined to `file`/`directory` based on the path itself. So
+			// `allowedHosts` entries use a single `file:` prefix and the glob
+			// portion is matched against the rawSpec's path.
+			if (!parsed.rawSpec.startsWith('file:')) {
+				return false;
+			}
+			const path = parsed.rawSpec.slice('file:'.length);
+			return allowedHosts.some((entry) => {
+				if (!entry.startsWith('file:')) {
+					return false;
+				}
+				return minimatch(path, entry.slice('file:'.length));
+			});
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Check if a package has an npm-shrinkwrap.json via its manifest
+ * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<boolean | null>}
+ */
+async function hasShrinkwrap(packageName, version, allowedHosts) {
+	if (!isAllowedSpec(version, allowedHosts)) {
+		return null;
+	}
 	try {
 		const manifest = await pacote.manifest(`${packageName}@${version}`, {
 			preferOnline: false, // Use cache if available
@@ -280,6 +363,17 @@ export default {
 				},
 				uniqueItems: true,
 			},
+			{
+				type: 'object',
+				properties: {
+					allowedHosts: {
+						type: 'array',
+						items: { type: 'string', minLength: 1 },
+						uniqueItems: true,
+					},
+				},
+				additionalProperties: false,
+			},
 		],
 		messages: {
 			hasShrinkwrap: 'Package `{{name}}@{{version}}` in lockfile `{{filename}}` includes an npm-shrinkwrap.json',
@@ -291,6 +385,10 @@ export default {
 	create(context) {
 		/** @type {string[]} */
 		const ignoreSpecs = context.options[0] || [];
+
+		const optionAllowedHosts = /** @type {{ allowedHosts?: readonly string[] } | undefined} */ (context.options && context.options[1])?.allowedHosts;
+		/** @type {readonly string[] | null} */
+		const allowedHosts = optionAllowedHosts ? optionAllowedHosts : null;
 
 		/** @type {Lockfile[]} */
 		const lockfiles = values(PACKAGE_MANAGERS).flatMap((pm) => pm.lockfiles);
@@ -370,7 +468,7 @@ export default {
 						name,
 						version,
 					}) => {
-						const result = await hasShrinkwrap(name, version);
+						const result = await hasShrinkwrap(name, version, allowedHosts);
 						return {
 							name,
 							version,
@@ -427,7 +525,7 @@ export default {
 						version,
 						line,
 					}) => {
-						const result = await hasShrinkwrap(name, version);
+						const result = await hasShrinkwrap(name, version, allowedHosts);
 						return {
 							name,
 							version,

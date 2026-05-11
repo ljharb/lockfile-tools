@@ -1075,3 +1075,152 @@ test('shrinkwrap rule - npa throws non-Error value', async (t) => {
 	);
 	t.end();
 });
+
+test('shrinkwrap rule - allowedHosts option blocks unlisted hosts', async (t) => {
+	/** @type {string[]} */
+	const seen = [];
+	const rule = await esmock('eslint-plugin-lockfile/rules/shrinkwrap.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				seen.push(spec);
+				throw new Error(`pacote should not be invoked for blocked spec: ${spec}`);
+			},
+		},
+	});
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/git-pkg': {
+				version: 'git+https://attacker.test/x.git#main',
+				resolved: 'https://registry.npmjs.org/git-pkg/-/git-pkg-1.0.0.tgz',
+			},
+			'node_modules/remote-pkg': {
+				version: 'https://attacker.test/x.tgz',
+				resolved: 'https://registry.npmjs.org/remote-pkg/-/remote-pkg-1.0.0.tgz',
+			},
+		},
+	}));
+
+	// Direct create() invocation so we can pass options[1] (allowedHosts).
+	const testFile = join(tmpDir, 'index.js');
+	/** @type {unknown[]} */
+	const reports = [];
+	const context = {
+		filename: testFile,
+		options: [[], { allowedHosts: [] }],
+		/** @param {unknown} info */
+		report(info) {
+			reports.push(info);
+		},
+	};
+	const ruleInstance = rule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.deepEqual(seen, [], 'pacote.manifest is not called for git/remote specs when allowedHosts is empty');
+	t.equal(reports.length, 0, 'no shrinkwrap diagnostics for skipped packages');
+	t.end();
+});
+
+test('shrinkwrap rule - allowedHosts option permits matching hosts', async (t) => {
+	/** @type {string[]} */
+	const seen = [];
+	const rule = await esmock('eslint-plugin-lockfile/rules/shrinkwrap.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				seen.push(spec);
+				return { _hasShrinkwrap: false };
+			},
+		},
+	});
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/safe-git': {
+				version: 'git+https://github.com/user/safe.git#main',
+				resolved: 'https://registry.npmjs.org/safe-git/-/safe-git-1.0.0.tgz',
+			},
+			'node_modules/blocked-git': {
+				version: 'git+https://attacker.test/x.git#main',
+				resolved: 'https://registry.npmjs.org/blocked-git/-/blocked-git-1.0.0.tgz',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const context = {
+		filename: testFile,
+		options: [[], { allowedHosts: ['github.com'] }],
+		report() { /* discard */ },
+	};
+	const ruleInstance = rule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.ok(seen.some((s) => s.includes('github.com')), 'pacote was called for the github-hosted git spec');
+	t.ok(!seen.some((s) => s.includes('attacker.test')), 'pacote was not called for the unlisted host');
+	t.end();
+});
+
+test('shrinkwrap rule - allowedHosts option supports file: globs', async (t) => {
+	/** @type {string[]} */
+	const seen = [];
+	const rule = await esmock('eslint-plugin-lockfile/rules/shrinkwrap.mjs', {}, {
+		pacote: {
+			/** @param {string} spec */
+			async manifest(spec) {
+				seen.push(spec);
+				return { _hasShrinkwrap: false };
+			},
+		},
+	});
+	const tmpDir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-test-'));
+	t.teardown(() => rmSync(tmpDir, { recursive: true, force: true }));
+
+	writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
+	writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({
+		lockfileVersion: 3,
+		packages: {
+			'': { name: 'test' },
+			'node_modules/local-pkg': {
+				version: 'file:./packages/local-pkg',
+				resolved: 'file:./packages/local-pkg',
+			},
+			'node_modules/local-tgz': {
+				version: 'file:./vendor/foo.tgz',
+				resolved: 'file:./vendor/foo.tgz',
+			},
+			'node_modules/blocked-local': {
+				version: 'file:./other/blocked',
+				resolved: 'file:./other/blocked',
+			},
+		},
+	}));
+
+	const testFile = join(tmpDir, 'index.js');
+	const context = {
+		filename: testFile,
+		options: [[], { allowedHosts: ['file:./packages/**', 'file:./vendor/*.tgz'] }],
+		report() { /* discard */ },
+	};
+	const ruleInstance = rule.create(context);
+	// eslint-disable-next-line new-cap
+	await ruleInstance.Program({ type: 'Program' });
+
+	t.ok(seen.some((s) => s.includes('file:./packages/local-pkg')), 'file: directory spec matching glob is forwarded');
+	t.ok(seen.some((s) => s.includes('file:./vendor/foo.tgz')), 'file: tarball spec matching glob is forwarded');
+	t.notOk(seen.some((s) => s.includes('file:./other/blocked')), 'file: spec not matching any allowedHosts glob is blocked');
+	t.end();
+});

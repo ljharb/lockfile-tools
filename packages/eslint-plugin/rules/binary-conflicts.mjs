@@ -14,7 +14,9 @@ This rule uses pacote to fetch package manifests without requiring node_modules 
 
 import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
+import npa from 'npm-package-arg';
 import pacote from 'pacote';
+import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent } from 'lockfile-tools/io';
 import { extractPackageName, traverseDependenciesAST, forEachNpmPackagesMember } from 'lockfile-tools/npm';
@@ -45,10 +47,92 @@ const { parse } = JSON;
  */
 
 /**
- * Fetch package manifest and extract bin information
- * @type {(packageName: string, version: string) => Promise<Record<string, string> | null>}
+ * Returns the host portion of a non-registry spec, or null if it can't be
+ * extracted. Used to honor a host allowlist for git/remote specs without
+ * blocking ordinary registry traffic.
+ * @type {(parsed: import('npm-package-arg').Result) => string | null}
  */
-async function fetchPackageBins(packageName, version) {
+function getSpecHost(parsed) {
+	if (parsed.type === 'git') {
+		const { hosted } = /** @type {{ hosted?: { domain?: string } }} */ (parsed);
+		if (hosted && typeof hosted.domain === 'string') {
+			return hosted.domain;
+		}
+		try {
+			return new URL(parsed.rawSpec.replace(/^git\+/, '')).host || null;
+		} catch {
+			return null;
+		}
+	}
+	if (parsed.type === 'remote') {
+		try {
+			return new URL(/** @type {string} */ (parsed.fetchSpec)).host || null;
+		} catch {
+			return null;
+		}
+	}
+	return null;
+}
+
+/**
+ * Returns true if `version` is safe to forward to pacote under the given
+ * allowlist policy:
+ * - `allowedHosts === null` → no gating (default; pacote sees every spec).
+ * - registry-style specs (version/range/tag/alias) always pass — those go
+ *   to the configured npm registry, not a lockfile-controlled host.
+ * - git/remote specs must have a host listed in `allowedHosts`.
+ * - file/directory specs must match a `file:<glob>` entry in `allowedHosts`
+ *   (matched against the path portion of `rawSpec` via minimatch).
+ * - anything unparseable is rejected.
+ * @type {(version: string, allowedHosts: readonly string[] | null) => boolean}
+ */
+function isAllowedSpec(version, allowedHosts) {
+	if (allowedHosts === null) {
+		return true;
+	}
+	try {
+		const parsed = npa.resolve('x', version);
+		if (parsed.type === 'version' || parsed.type === 'range' || parsed.type === 'tag') {
+			return true;
+		}
+		if (parsed.type === 'alias') {
+			const sub = /** @type {{ subSpec?: { rawSpec: string } }} */ (parsed).subSpec;
+			return !!sub && isAllowedSpec(sub.rawSpec, allowedHosts);
+		}
+		if (parsed.type === 'git' || parsed.type === 'remote') {
+			const host = getSpecHost(parsed);
+			return !!host && allowedHosts.includes(host);
+		}
+		if (parsed.type === 'file' || parsed.type === 'directory') {
+			// npa only recognizes `file:` as the input prefix; `type` is then
+			// refined to `file`/`directory` based on the path itself. So
+			// `allowedHosts` entries use a single `file:` prefix and the glob
+			// portion is matched against the rawSpec's path.
+			if (!parsed.rawSpec.startsWith('file:')) {
+				return false;
+			}
+			const path = parsed.rawSpec.slice('file:'.length);
+			return allowedHosts.some((entry) => {
+				if (!entry.startsWith('file:')) {
+					return false;
+				}
+				return minimatch(path, entry.slice('file:'.length));
+			});
+		}
+		return false;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Fetch package manifest and extract bin information
+ * @type {(packageName: string, version: string, allowedHosts: readonly string[] | null) => Promise<Record<string, string> | null>}
+ */
+async function fetchPackageBins(packageName, version, allowedHosts) {
+	if (!isAllowedSpec(version, allowedHosts)) {
+		return null;
+	}
 	try {
 		const manifest = await pacote.manifest(`${packageName}@${version}`, {
 			preferOnline: false, // Use cache if available
@@ -100,8 +184,8 @@ function getDirectDependencies(dir) {
 	return directDeps;
 }
 
-/** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
-async function extractPackageBinsFromNpmLockfile(content, dir) {
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+async function extractPackageBinsFromNpmLockfile(content, dir, allowedHosts) {
 	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
 
@@ -131,7 +215,7 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 	const results = await Promise.all(candidates.map(async ({
 		member, packageName, name, version,
 	}) => {
-		const bins = await fetchPackageBins(packageName, version);
+		const bins = await fetchPackageBins(packageName, version, allowedHosts);
 		if (bins) {
 			return {
 				name,
@@ -146,8 +230,8 @@ async function extractPackageBinsFromNpmLockfile(content, dir) {
 	return results.filter((p) => p !== null);
 }
 
-/** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
-async function extractPackageBinsFromYarnLockfile(content, dir) {
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+async function extractPackageBinsFromYarnLockfile(content, dir, allowedHosts) {
 	const directDeps = getDirectDependencies(dir);
 	const parsedEntries = parseYarnLockfile(content, ['version']);
 
@@ -171,7 +255,7 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 		version,
 		line,
 	}) => {
-		const bins = await fetchPackageBins(name, version);
+		const bins = await fetchPackageBins(name, version, allowedHosts);
 		if (bins) {
 			return {
 				name,
@@ -188,8 +272,8 @@ async function extractPackageBinsFromYarnLockfile(content, dir) {
 	return results.filter((p) => p !== null);
 }
 
-/** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
-async function extractPackageBinsFromPnpmLockfile(content, dir) {
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+async function extractPackageBinsFromPnpmLockfile(content, dir, allowedHosts) {
 	/** @type {PackageBinInfo[]} */
 	const packages = [];
 	const lines = content.split('\n');
@@ -248,7 +332,7 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 		version,
 		line,
 	}) => {
-		const bins = await fetchPackageBins(name, version);
+		const bins = await fetchPackageBins(name, version, allowedHosts);
 		if (bins) {
 			return {
 				name: key,
@@ -267,25 +351,25 @@ async function extractPackageBinsFromPnpmLockfile(content, dir) {
 	return packages;
 }
 
-/** @type {(_content: string, _dir: string) => Promise<PackageBinInfo[]>} */
+/** @type {(_content: string, _dir: string, _allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
 // eslint-disable-next-line no-unused-vars
-async function extractPackageBinsFromBunLockfile(_content, _dir) {
+async function extractPackageBinsFromBunLockfile(_content, _dir, _allowedHosts) {
 	// bun.lock (text format) - doesn't store version information in a parseable way
 	// For now, return empty array
 	return [];
 }
 
-/** @type {(filepath: string, dir: string) => Promise<PackageBinInfo[]>} */
-async function extractPackageBinsFromBunLockbBinary(filepath, dir) {
+/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+async function extractPackageBinsFromBunLockbBinary(filepath, dir, allowedHosts) {
 	const yarnLockContent = loadBunLockbContent(filepath);
 	if (!yarnLockContent) {
 		return [];
 	}
-	return extractPackageBinsFromYarnLockfile(yarnLockContent, dir);
+	return extractPackageBinsFromYarnLockfile(yarnLockContent, dir, allowedHosts);
 }
 
-/** @type {(content: string, dir: string) => Promise<PackageBinInfo[]>} */
-async function extractPackageBinsFromVltLockfile(content, dir) {
+/** @type {(content: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
+async function extractPackageBinsFromVltLockfile(content, dir, allowedHosts) {
 	const root = getRootObject(parseJSON(content));
 	const directDeps = getDirectDependencies(dir);
 
@@ -310,7 +394,7 @@ async function extractPackageBinsFromVltLockfile(content, dir) {
 	const results = await Promise.all(candidates.map(async ({
 		member, key, name, version,
 	}) => {
-		const bins = await fetchPackageBins(name, version);
+		const bins = await fetchPackageBins(name, version, allowedHosts);
 		if (bins) {
 			return {
 				name: key,
@@ -325,7 +409,7 @@ async function extractPackageBinsFromVltLockfile(content, dir) {
 	return results.filter((p) => p !== null);
 }
 
-/** @type {{ [k in Lockfile]: (s: string, d: string) => Promise<PackageBinInfo[]> }} */
+/** @type {{ [k in Lockfile]: (s: string, d: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]> }} */
 const extracts = {
 	// @ts-expect-error TS doesn't understand dunder proto
 	__proto__: null,
@@ -340,9 +424,9 @@ const extracts = {
 
 /**
  * Extract package bins from virtual lockfile packages
- * @type {(virtualPackages: import('lockfile-tools/virtual').VirtualPackageInfo[]) => Promise<PackageBinInfo[]>}
+ * @type {(virtualPackages: import('lockfile-tools/virtual').VirtualPackageInfo[], allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>}
  */
-async function extractPackageBinsFromVirtual(virtualPackages) {
+async function extractPackageBinsFromVirtual(virtualPackages, allowedHosts) {
 	/** @type {PackageBinInfo[]} */
 	const packages = [];
 
@@ -352,7 +436,7 @@ async function extractPackageBinsFromVirtual(virtualPackages) {
 		version,
 		isDirect,
 	}) => {
-		const bins = await fetchPackageBins(name, version);
+		const bins = await fetchPackageBins(name, version, allowedHosts);
 		if (bins) {
 			return {
 				name,
@@ -381,7 +465,19 @@ export default {
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/binary-conflicts.md',
 		},
-		schema: [],
+		schema: [
+			{
+				type: 'object',
+				properties: {
+					allowedHosts: {
+						type: 'array',
+						items: { type: 'string', minLength: 1 },
+						uniqueItems: true,
+					},
+				},
+				additionalProperties: false,
+			},
+		],
 		messages: {
 			binaryConflict: 'Binary name conflict: "{{binary}}" is provided by multiple packages: {{packages}}',
 			binaryConflictWithPreference: 'Binary name conflict: "{{binary}}" is provided by {{count}} packages. Currently active: {{active}} ({{reason}}). Also provided by: {{others}}',
@@ -393,12 +489,16 @@ export default {
 		/** @type {Lockfile[]} */
 		const lockfiles = values(PACKAGE_MANAGERS).flatMap((pm) => pm.lockfiles);
 
+		const optionAllowedHosts = /** @type {{ allowedHosts?: readonly string[] } | undefined} */ (context.options && context.options[0])?.allowedHosts;
+		/** @type {readonly string[] | null} */
+		const allowedHosts = optionAllowedHosts ? optionAllowedHosts : null;
+
 		return {
 			async Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
 				const filename = context.filename ?? context.getFilename();
 				const dir = dirname(filename);
-				/** @type {(filepath: string, dir: string) => Promise<PackageBinInfo[]>} */
+				/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<PackageBinInfo[]>} */
 				const extractPackageBinsFromLockfile = createLockfileExtractor(
 					extracts,
 					/** @type {(filepath: string, ...args: unknown[]) => Promise<PackageBinInfo[]>} */ (extractPackageBinsFromBunLockbBinary),
@@ -411,7 +511,7 @@ export default {
 				// If no lockfile exists, use virtual lockfile from arborist
 				if (!lockfileExists) {
 					const virtualPackages = await buildVirtualLockfile(dir);
-					const packages = await extractPackageBinsFromVirtual(virtualPackages);
+					const packages = await extractPackageBinsFromVirtual(virtualPackages, allowedHosts);
 
 					// Build a map of binary names to packages that provide them
 					/** @type {Map<string, PackageBinInfo[]>} */
@@ -488,7 +588,7 @@ export default {
 					let packages;
 					try {
 						// eslint-disable-next-line no-await-in-loop
-						packages = await extractPackageBinsFromLockfile(lockfilePath, dir);
+						packages = await extractPackageBinsFromLockfile(lockfilePath, dir, allowedHosts);
 					} catch (e) {
 						context.report({
 							node,

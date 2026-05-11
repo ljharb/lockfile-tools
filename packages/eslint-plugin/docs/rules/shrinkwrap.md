@@ -78,6 +78,38 @@ An array of npm package specifiers to ignore. Each entry must be a valid [npm-pa
 - Scoped packages are supported (e.g., `"@scope/pkg"`, `"@scope/pkg@>=2.0.0"`).
 - Non-registry specifiers (e.g., GitHub URLs, git URLs) are not allowed in the ignore list and will produce an error.
 
+### `allowedHosts` (second option)
+
+By default, this rule passes every package spec — including `git+https://…`,
+remote tarball URLs, and aliases — to `pacote.manifest`, which will fetch from
+the URL specified in the lockfile. When linting lockfiles you do not fully
+trust (for example, in CI on a PR), set `allowedHosts` (in a second options
+object) to restrict which hosts `pacote` may contact for non-registry specs:
+
+```json
+{
+  "rules": {
+    "lockfile/shrinkwrap": ["error",
+      [],
+      { "allowedHosts": ["github.com", "gitlab.com"] }
+    ]
+  }
+}
+```
+
+Behavior:
+
+- Registry specs (semver `version`/`range`/`tag` and `npm:` aliases) are always
+  allowed — they resolve through the configured npm registry, not the lockfile.
+- `git+…` and remote tarball specs are passed to `pacote` only when their host
+  appears in `allowedHosts`.
+- Local `file:` specs (both file tarballs and directory specs) are allowed when
+  the path portion matches a `file:<glob>` entry in `allowedHosts`. The glob is
+  evaluated with [minimatch](https://www.npmjs.com/package/minimatch); use
+  `file:**` to allow all local specs, or e.g. `file:./packages/**` to scope
+  permission to a subtree.
+- An empty array (`"allowedHosts": []`) blocks every non-registry spec.
+
 ## When Not To Use It
 
 If you are not concerned about dependencies shipping `npm-shrinkwrap.json` files, or if your project intentionally depends on packages that use shrinkwrap for stability reasons, you may want to disable this rule or use the `ignore` option.
