@@ -5,11 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.1.0...1.2.0)
+## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.2.0...1.3.0)
+
+### Commits
+
+- [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
+- [meta] [new] cover ESLint 8 + 9 across lowest/latest in a CI matrix [`1c1dc21`](https://github.com/ljharb/lockfile-tools/commit/1c1dc21671728ee208625f041790bd7008056471)
+
+## [lockfile-tools@1.2.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.1.0...lockfile-tools@1.2.0) - 2026-05-11
 
 ### Commits
 
 - [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
+- [tools] v1.2.0 [`e33c40e`](https://github.com/ljharb/lockfile-tools/commit/e33c40e49b8914d0f62b7961fb479544968f08f6)
 - [tools] [new] add makeEmpty factory parameter to createLockfileExtractor [`1ad72ee`](https://github.com/ljharb/lockfile-tools/commit/1ad72ee8f2a495d3c9bc31933cfc43a9a56824b6)
 
 ## [lockfile-tools@1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...lockfile-tools@1.1.0) - 2026-05-08
