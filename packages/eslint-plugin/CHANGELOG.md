@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.1...1.2.0)
+## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.2.0...1.3.0)
+
+### Commits
+
+- [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
+- [meta] [new] cover ESLint 8 + 9 across lowest/latest in a CI matrix [`1c1dc21`](https://github.com/ljharb/lockfile-tools/commit/1c1dc21671728ee208625f041790bd7008056471)
+- [plugin] [deps] update `lockfile-tools` [`24ef026`](https://github.com/ljharb/lockfile-tools/commit/24ef0264877f82632073a1f1047def6570ba62c8)
+
+## [eslint-plugin-lockfile@1.2.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.1...eslint-plugin-lockfile@1.2.0) - 2026-05-11
 
 ### Commits
 
@@ -13,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [plugin] [new] gate pacote network egress behind an allowedHosts option [`206176d`](https://github.com/ljharb/lockfile-tools/commit/206176d92cbf60b526e763bf83a488769261fa88)
 - [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
 - [plugin] [refactor] coalesce pacote manifest fetches across rules [`8c2fb34`](https://github.com/ljharb/lockfile-tools/commit/8c2fb344009d571a3ce9c0f2b3179f89c1d3e741)
+- [plugin] v1.2.0 [`b88e365`](https://github.com/ljharb/lockfile-tools/commit/b88e365ec22a2e6d86218ac91c374270125a63c6)
 - [plugin] [deps] update `lockfile-tools` [`e744810`](https://github.com/ljharb/lockfile-tools/commit/e7448103778f92d81c9b5d4130aaacebbf6a9a9c)
 
 ## [eslint-plugin-lockfile@1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...eslint-plugin-lockfile@1.1.1) - 2026-05-08
