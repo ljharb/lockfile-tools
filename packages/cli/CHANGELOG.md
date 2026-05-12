@@ -5,12 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.3](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.2...1.0.3)
+## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.3...1.1.0)
+
+### Commits
+
+- [cli] [deps] update `lockfile-tools` [`2ef6b30`](https://github.com/ljharb/lockfile-tools/commit/2ef6b300ca2e1ba9216fee4dfa9f558578b7d259)
+- [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
+
+## [lintlock@1.0.3](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.2...lintlock@1.0.3) - 2026-05-11
 
 ### Commits
 
 - [cli] [fix] close TOCTOU window when creating the ESLint-8 lint target [`6be4cd0`](https://github.com/ljharb/lockfile-tools/commit/6be4cd029f81ca815e23132a663861870b926cac)
 - [*] general docs/types cleanup [`946b43d`](https://github.com/ljharb/lockfile-tools/commit/946b43d09740424f8097640f3577e6418d79559d)
+- [cli] v1.0.3 [`3347893`](https://github.com/ljharb/lockfile-tools/commit/33478938b6775725f6d00c104f3659689e5c3f68)
 - [cli] [deps] update `eslint-plugin-lockfile`, `lockfile-tools`, `pargs` [`1ec2ba7`](https://github.com/ljharb/lockfile-tools/commit/1ec2ba748293162c9057245f889fa0e21d29b633)
 - [cli] [dev deps] update `auto-changelog` [`e6b09ae`](https://github.com/ljharb/lockfile-tools/commit/e6b09aefae99f72df8adcf5381988a2f9d15c804)
 
