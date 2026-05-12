@@ -11,7 +11,7 @@ import { execSync } from 'child_process';
 import { minimatch } from 'minimatch';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 import { loadLockfileContent, loadBunLockbContent, getLockfileName } from 'lockfile-tools/io';
-import { makeLockfileContentLoader } from '../utils.mjs';
+import { makeLockfileContentLoader, getContextFilename, getContextSourceCode } from '../utils.mjs';
 import { traverseDependenciesAST, forEachNpmPackagesMember, extractPackageName } from 'lockfile-tools/npm';
 import { parseYarnLockfile, parsePnpmLockfile } from 'lockfile-tools/parsers';
 import {
@@ -316,6 +316,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'enforce allowed registries in lockfiles',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/registry.md',
@@ -376,7 +377,7 @@ export default {
 			const trueRegistries = Object.entries(config).filter(([, v]) => v === true);
 			if (trueRegistries.length > 1) {
 				// Use context.sourceCode if available (ESLint 8.40+), fall back to getSourceCode() for older versions
-				const sourceCode = context.sourceCode ?? context.getSourceCode();
+				const sourceCode = getContextSourceCode(context);
 				context.report({
 					node: sourceCode.ast,
 					messageId: 'multipleTrueRegistries',
@@ -409,7 +410,7 @@ export default {
 			return {
 				async Program(node) {
 					// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-					const filename = context.filename ?? context.getFilename();
+					const filename = getContextFilename(context);
 					const dir = dirname(filename);
 					const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 
@@ -591,7 +592,7 @@ export default {
 		return {
 			async Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-				const filename = context.filename ?? context.getFilename();
+				const filename = getContextFilename(context);
 				const dir = dirname(filename);
 				const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 

@@ -21,7 +21,7 @@ import {
 	forEachMember,
 	nodeLine,
 } from 'lockfile-tools/json-ast';
-import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
+import { makeLockfileContentLoader, stripNodeModulesPrefix, getContextFilename } from '../utils.mjs';
 
 const { values } = Object;
 const { parse } = JSON;
@@ -346,6 +346,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'enforce integrity values in lockfiles',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/integrity.md',
@@ -528,7 +529,7 @@ export default {
 		return {
 			Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-				const dir = dirname(context.filename ?? context.getFilename());
+				const dir = dirname(getContextFilename(context));
 				const extractPackagesFromLockfile = createLockfileExtractor(
 					extracts,
 					extractPackagesFromBunLockbBinary,

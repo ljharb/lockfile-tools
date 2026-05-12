@@ -31,6 +31,7 @@
 import { readdirSync } from 'fs';
 import { dirname } from 'path';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
+import { getContextFilename } from '../utils.mjs';
 
 const { from } = Array;
 const { keys, values } = Object;
@@ -102,6 +103,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'enforce allowed lockfile formats',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/flavor.md',
@@ -160,7 +162,7 @@ export default {
 		return {
 			Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-				const filename = context.filename ?? context.getFilename();
+				const filename = getContextFilename(context);
 				const dir = dirname(filename);
 				const files = readdirSync(dir);
 

@@ -13,7 +13,7 @@
 		"@istanbuljs/esm-loader-hook": "^0.3.0",
 		"@ljharb/tsconfig": "^0.3.2",
 		"@types/tape": "^5.8.1",
-		"eslint": "^8.8.0 || ^9.39.2",
+		"eslint": "^8.8.0 || ^9.39.2 || ^10.3.0",
 		"eslint-plugin-lockfile": "*",
 		"esmock": "^2.7.4",
 		"lintlock": "*",

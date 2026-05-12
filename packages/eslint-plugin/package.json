@@ -44,7 +44,7 @@
 		"typescript": "next"
 	},
 	"peerDependencies": {
-		"eslint": "^8.8.0 || ^9.39.2"
+		"eslint": "^8.8.0 || ^9.39.2 || ^10.3.0"
 	},
 	"engines": {
 		"node": "^22.21 || ^24.11 || >= 25.2"

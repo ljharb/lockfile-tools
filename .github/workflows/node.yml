@@ -34,3 +34,19 @@ jobs:
       range: '^22.21 || ^24.11 || >= 25.2'
       type: minors
       command: 'npm install --no-save --include-workspace-root --workspaces eslint@9 && npm run tests-only'
+
+  eslint-10-lowest:
+    name: 'eslint 10.3.0'
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '^22.21 || ^24.11 || >= 25.2'
+      type: minors
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@10.3.0 && npm run tests-only'
+
+  eslint-10-latest:
+    name: 'eslint v10 (latest)'
+    uses: ljharb/actions/.github/workflows/node.yml@main
+    with:
+      range: '^22.21 || ^24.11 || >= 25.2'
+      type: minors
+      command: 'npm install --no-save --include-workspace-root --workspaces eslint@10 && npm run tests-only'

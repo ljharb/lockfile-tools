@@ -24,7 +24,7 @@ import {
 } from 'lockfile-tools/json-ast';
 import { extractRegistryFromUrl } from 'lockfile-tools/registry';
 import { hasLockfile, buildVirtualLockfile } from 'lockfile-tools/virtual';
-import { makeLockfileContentLoader, stripNodeModulesPrefix } from '../utils.mjs';
+import { makeLockfileContentLoader, stripNodeModulesPrefix, getContextFilename } from '../utils.mjs';
 
 const { values } = Object;
 
@@ -189,6 +189,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'warn on dependencies from non-registry sources',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: false,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/non-registry-specifiers.md',
@@ -233,7 +234,7 @@ export default {
 		return {
 			async Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-				const filename = context.filename ?? context.getFilename();
+				const filename = getContextFilename(context);
 				const dir = dirname(filename);
 				const extractDepsFromLockfile = createLockfileExtractor(
 					extracts,

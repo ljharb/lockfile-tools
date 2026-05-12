@@ -30,7 +30,7 @@ import {
 	forEachMember,
 	nodeLine,
 } from 'lockfile-tools/json-ast';
-import { makeLockfileContentLoader } from '../utils.mjs';
+import { makeLockfileContentLoader, getContextFilename } from '../utils.mjs';
 
 const { values, entries } = Object;
 const { parse } = JSON;
@@ -526,6 +526,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'detect binary name conflicts between packages',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/binary-conflicts.md',
@@ -562,7 +563,7 @@ export default {
 		return {
 			async Program(node) {
 				// Use context.filename if available (ESLint 8.40+), fall back to getFilename() for older versions
-				const filename = context.filename ?? context.getFilename();
+				const filename = getContextFilename(context);
 				const dir = dirname(filename);
 				/** @type {(filepath: string, dir: string, allowedHosts: readonly string[] | null) => Promise<BinsExtractResult>} */
 				const extractPackageBinsFromLockfile = createLockfileExtractor(

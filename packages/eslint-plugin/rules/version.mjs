@@ -17,7 +17,7 @@ import {
 	getRootObject,
 	getNumberMember,
 } from 'lockfile-tools/json-ast';
-import { makeLockfileContentLoader } from '../utils.mjs';
+import { makeLockfileContentLoader, getContextFilename } from '../utils.mjs';
 
 /** @import { Rule } from 'eslint' */
 /** @import { Lockfile, PackageManager } from 'lockfile-tools/lib/package-managers.d.mts' */
@@ -113,6 +113,7 @@ export default {
 		type: 'problem',
 		docs: {
 			description: 'enforce lockfile version',
+			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
 			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/version.md',
@@ -220,7 +221,7 @@ export default {
 
 		return {
 			Program(node) {
-				const filename = context.filename ?? context.getFilename();
+				const filename = getContextFilename(context);
 				const dir = dirname(filename);
 				const getContent = makeLockfileContentLoader(context, loadLockfileContent);
 
