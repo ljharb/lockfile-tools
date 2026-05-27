@@ -5,10 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.3...1.1.0)
+## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.1.0...1.2.0)
 
 ### Commits
 
+- [types] fix type errors [`c6b298d`](https://github.com/ljharb/lockfile-tools/commit/c6b298dc14bb57cd299f20025c1548417d470bac)
+- [cli] [new] enforce the `tracked` rule [`5f58fcc`](https://github.com/ljharb/lockfile-tools/commit/5f58fccb1f70abcd0a2bac4ca6ca8fd3a3a8985b)
+- [cli] [deps] update `eslint-plugin-lockfile` [`30f5eeb`](https://github.com/ljharb/lockfile-tools/commit/30f5eeb94f04146e3636d2f314a81ef91ed0edde)
+
+## [lintlock@1.1.0](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.0.3...lintlock@1.1.0) - 2026-05-12
+
+### Commits
+
+- [cli] v1.1.0 [`064b136`](https://github.com/ljharb/lockfile-tools/commit/064b136526fbdbf35f0ce85b278d485c53a50e42)
 - [cli] [deps] update `lockfile-tools` [`2ef6b30`](https://github.com/ljharb/lockfile-tools/commit/2ef6b300ca2e1ba9216fee4dfa9f558578b7d259)
 - [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
 
