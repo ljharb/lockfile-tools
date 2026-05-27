@@ -5,8 +5,8 @@ import { basename } from 'path';
 /**
  * `getFilename`/`getSourceCode` were removed from `Rule.RuleContext`'s
  * declared types in eslint@10. They still exist at runtime on
- * eslint <= 8.39.x — where the modern `filename`/`sourceCode` getters
- * didn't yet exist — so the v8 fallback branch needs them. Centralize
+ * eslint <= 8.39.x - where the modern `filename`/`sourceCode` getters
+ * didn't yet exist - so the v8 fallback branch needs them. Centralize
  * the type cast here so consumers can `??` directly without sprinkling
  * `@type {unknown}` casts at every call site.
  * @typedef {Rule.RuleContext & { getFilename?(): string, getSourceCode?(): SourceCode }} LegacyRuleContext

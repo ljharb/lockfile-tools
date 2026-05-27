@@ -4,6 +4,7 @@ import integrity from './rules/integrity.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
 import shrinkwrap from './rules/shrinkwrap.mjs';
+import tracked from './rules/tracked.mjs';
 import versionRule from './rules/version.mjs';
 import { PACKAGE_MANAGERS } from 'lockfile-tools/package-managers';
 
@@ -53,6 +54,7 @@ const rules = {
 	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
 	shrinkwrap,
+	tracked,
 	version: versionRule,
 };
 

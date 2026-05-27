@@ -77,15 +77,16 @@ export default [
 💼 Configurations enabled in.\
 ✅ Set in the `recommended` configuration.
 
-| Name                                                             | Description                                             | 💼                              |
-| :--------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------ |
-| [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages           | ✅ ![badge-recommended-legacy][] |
-| [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                        | ✅ ![badge-recommended-legacy][] |
-| [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                   | ✅ ![badge-recommended-legacy][] |
-| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources          | ✅ ![badge-recommended-legacy][] |
-| [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                 | ✅ ![badge-recommended-legacy][] |
-| [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json | ✅ ![badge-recommended-legacy][] |
-| [version](docs/rules/version.md)                                 | enforce lockfile version                                | ✅ ![badge-recommended-legacy][] |
+| Name                                                             | Description                                                               | 💼                              |
+| :--------------------------------------------------------------- | :------------------------------------------------------------------------ | :------------------------------ |
+| [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages                             | ✅ ![badge-recommended-legacy][] |
+| [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                                          | ✅ ![badge-recommended-legacy][] |
+| [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                                     | ✅ ![badge-recommended-legacy][] |
+| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources                            | ✅ ![badge-recommended-legacy][] |
+| [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                                   | ✅ ![badge-recommended-legacy][] |
+| [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json                   | ✅ ![badge-recommended-legacy][] |
+| [tracked](docs/rules/tracked.md)                                 | require lockfiles to be tracked in version control, or disabled in config |                                 |
+| [version](docs/rules/version.md)                                 | enforce lockfile version                                                  | ✅ ![badge-recommended-legacy][] |
 
 <!-- end auto-generated rules list -->
 
@@ -181,6 +182,19 @@ Detects when multiple packages provide command-line binaries with the same name,
 
 ```js
 'lockfile/binary-conflicts': 'error'
+```
+
+### `lockfile/tracked`
+
+Ensures that everyone on a project uses the same lockfile, or no one does.
+If a lockfile exists on disk, it must be tracked in version control (i.e. not matched by `.gitignore`); if no lockfile exists, the package manager must be configured not to produce one (e.g. `package-lock=false` for npm).
+Applications are nudged to commit a lockfile; published packages are nudged to disable it.
+
+Unlike the other rules, this one runs against `package.json` (so it fires whether or not a lockfile exists), so it needs its own config block with a JSON-tolerant parser.
+See [the rule docs](docs/rules/tracked.md) for the per-package-manager disabling config and options.
+
+```js
+'lockfile/tracked': ['error', 'npm']
 ```
 
 ## CLI

@@ -25,6 +25,7 @@ declare const config: Plugin & {
             | 'non-registry-specifiers'
             | 'registry'
             | 'shrinkwrap'
+            | 'tracked'
             | 'version'
         ]: Rule.RuleModule;
     };
