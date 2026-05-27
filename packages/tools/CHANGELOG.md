@@ -5,14 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.2.0...1.3.0)
+## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.2.0...lockfile-tools@1.3.0) - 2026-05-12
 
 ### Commits
 
+- [tools] v1.3.0 [`a3bfe7a`](https://github.com/ljharb/lockfile-tools/commit/a3bfe7a2646ed7a038c48738b4277f5cb5f47df3)
 - [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
 - [meta] [new] cover ESLint 8 + 9 across lowest/latest in a CI matrix [`1c1dc21`](https://github.com/ljharb/lockfile-tools/commit/1c1dc21671728ee208625f041790bd7008056471)
 
-## [lockfile-tools@1.2.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.1.0...lockfile-tools@1.2.0) - 2026-05-11
+## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.1.0...lockfile-tools@1.2.0) - 2026-05-11
 
 ### Commits
 
@@ -20,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [tools] v1.2.0 [`e33c40e`](https://github.com/ljharb/lockfile-tools/commit/e33c40e49b8914d0f62b7961fb479544968f08f6)
 - [tools] [new] add makeEmpty factory parameter to createLockfileExtractor [`1ad72ee`](https://github.com/ljharb/lockfile-tools/commit/1ad72ee8f2a495d3c9bc31933cfc43a9a56824b6)
 
-## [lockfile-tools@1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...lockfile-tools@1.1.0) - 2026-05-08
+## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.2...lockfile-tools@1.1.0) - 2026-05-08
 
 ### Commits
 
@@ -29,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [tools] [dev deps] update `@types/npmcli__arborist`, `auto-changelog`, `eslint` [`98363c9`](https://github.com/ljharb/lockfile-tools/commit/98363c9118c517f7f3d49851dee56d382362ab5a)
 - [tools] [new] add optional content loader to `createLockfileExtractor` [`5d31b1e`](https://github.com/ljharb/lockfile-tools/commit/5d31b1e9a1817fd27c6eb1afa9d6bd7e08655d20)
 
-## [lockfile-tools@1.0.2](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.1...lockfile-tools@1.0.2) - 2026-04-12
+## [1.0.2](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.1...lockfile-tools@1.0.2) - 2026-04-12
 
 ### Commits
 
@@ -40,14 +41,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [tools] [meta] fix changelog [`f602276`](https://github.com/ljharb/lockfile-tools/commit/f60227663e048825ec6c0d58a86c5c2ae6568e8f)
 - [tools] [deps] update `@npmcli/arborist` [`4013e10`](https://github.com/ljharb/lockfile-tools/commit/4013e10807766920378056c3010353ce06098af9)
 
-## [lockfile-tools@1.0.1](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.0...lockfile-tools@1.0.1) - 2026-01-08
+## [1.0.1](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.0.0...lockfile-tools@1.0.1) - 2026-01-08
 
 ### Commits
 
 - [tools] v1.0.1 [`c252c66`](https://github.com/ljharb/lockfile-tools/commit/c252c66e42757e5690d09b3fcada80ecb70e27a7)
 - [plugin] [fix] `registry` rule: don't check non-registry URLs (git+ssh, git+https, file, etc.) [`091d85b`](https://github.com/ljharb/lockfile-tools/commit/091d85b267a722bc957186c21f006f8d8d6c2b34)
 
-## lockfile-tools@1.0.0 - 2025-12-21
+## 1.0.0 - 2025-12-21
 
 ### Commits
 

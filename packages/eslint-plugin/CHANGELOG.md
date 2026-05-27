@@ -5,14 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.3.0...1.4.0)
+## [1.4.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.3.0...eslint-plugin-lockfile@1.4.0) - 2026-05-27
 
 ### Commits
 
 - [plugin] [new] add `tracked` rule [`2f2bef9`](https://github.com/ljharb/lockfile-tools/commit/2f2bef94be5364b729faba442a7474571428ebe2)
+- [plugin] v1.4.0 [`c86d014`](https://github.com/ljharb/lockfile-tools/commit/c86d01420df94455652cb0b8d8edc53b9324cdca)
 - [plugin] [deps] update `semver` [`7943ff2`](https://github.com/ljharb/lockfile-tools/commit/7943ff28cd6974bda066dcc6ea7f41a0a78f2e1c)
 
-## [eslint-plugin-lockfile@1.3.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.2.0...eslint-plugin-lockfile@1.3.0) - 2026-05-12
+## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.2.0...eslint-plugin-lockfile@1.3.0) - 2026-05-12
 
 ### Commits
 
@@ -21,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [meta] [new] cover ESLint 8 + 9 across lowest/latest in a CI matrix [`1c1dc21`](https://github.com/ljharb/lockfile-tools/commit/1c1dc21671728ee208625f041790bd7008056471)
 - [plugin] [deps] update `lockfile-tools` [`24ef026`](https://github.com/ljharb/lockfile-tools/commit/24ef0264877f82632073a1f1047def6570ba62c8)
 
-## [eslint-plugin-lockfile@1.2.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.1...eslint-plugin-lockfile@1.2.0) - 2026-05-11
+## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.1...eslint-plugin-lockfile@1.2.0) - 2026-05-11
 
 ### Commits
 
@@ -32,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [plugin] v1.2.0 [`b88e365`](https://github.com/ljharb/lockfile-tools/commit/b88e365ec22a2e6d86218ac91c374270125a63c6)
 - [plugin] [deps] update `lockfile-tools` [`e744810`](https://github.com/ljharb/lockfile-tools/commit/e7448103778f92d81c9b5d4130aaacebbf6a9a9c)
 
-## [eslint-plugin-lockfile@1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...eslint-plugin-lockfile@1.1.1) - 2026-05-08
+## [1.1.1](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.1.0...eslint-plugin-lockfile@1.1.1) - 2026-05-08
 
 ### Commits
 
@@ -47,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [plugin] [deps] update `lockfile-tools`, `minimatch`, `pacote`, `semver` [`c1a6f3b`](https://github.com/ljharb/lockfile-tools/commit/c1a6f3b62941f8c5ed4db341cc32dc99b3af0dfc)
 - [plugin] [dev deps] update `@eslint/core`, `auto-changelog`, `eslint-doc-generator` [`e396de0`](https://github.com/ljharb/lockfile-tools/commit/e396de0062ded906abb2adc284369e5b26fad7bb)
 
-## [eslint-plugin-lockfile@1.1.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.0.0...eslint-plugin-lockfile@1.1.0) - 2026-01-28
+## [1.1.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.0.0...eslint-plugin-lockfile@1.1.0) - 2026-01-28
 
 ### Commits
 
@@ -59,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [*] [dev deps] update `@types/npmcli__arborist`, `@eslint/core`, `npmignore` [`ae9ccf7`](https://github.com/ljharb/lockfile-tools/commit/ae9ccf7a1e1bd65d0a039b7fc2b755f3fe4fad2b)
 - [plugin] [deps] update `lockfile-tools` [`26f9970`](https://github.com/ljharb/lockfile-tools/commit/26f997021a20f86f55807949e80e8035a150bee8)
 
-## eslint-plugin-lockfile@1.0.0 - 2025-12-21
+## 1.0.0 - 2025-12-21
 
 ### Commits
 
