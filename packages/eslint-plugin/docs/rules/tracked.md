@@ -1,5 +1,7 @@
 # Require lockfiles to be tracked in version control, or disabled in config (`lockfile/tracked`)
 
+💼 This rule is enabled in the following configs: ✅ `recommended`, `recommended-legacy`.
+
 <!-- end auto-generated rule header -->
 
 ## Rule Details
@@ -60,7 +62,20 @@ Valid names: `"npm"`, `"yarn"`, `"pnpm"`, `"bun"`, `"vlt"`.
 
 ## Usage
 
-Unlike the other rules, this one is scoped to `package.json` rather than to the lockfiles - it has to run even when no lockfile is present. `package.json` is JSON, not JavaScript, so the config block needs a parser that does not choke on it: point the block at `package.json` and use a JSON-tolerant parser.
+This rule is part of the `recommended` config, so it is enabled automatically there. Note that, unlike the other rules, it is scoped to `package.json` rather than to the lockfiles - it has to run even when no lockfile is present. That is why the flat `recommended` config is an array of blocks (one for the lockfiles, one for `package.json`); including it in your config works the same as any flat config:
+
+```js
+// eslint.config.js
+import lockfile from 'eslint-plugin-lockfile';
+
+export default [
+	lockfile.configs.recommended,
+];
+```
+
+### Manual configuration
+
+`package.json` is JSON, not JavaScript, so the config block needs a parser that does not choke on it. The `recommended` config wires this up for you; if configuring manually, point the block at `package.json` and use a JSON-tolerant parser.
 
 ```js
 // eslint.config.js

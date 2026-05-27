@@ -25,7 +25,8 @@ test('version rule - reads piped lockfile content via lintText', skipOnV8, async
 		// Note: package-lock.json does NOT exist on disk in tmpDir.
 
 		const eslint = createESLint({
-			...plugin.configs.recommended,
+			// the first recommended block lints the lockfiles themselves
+			...plugin.configs.recommended[0],
 			plugins: { lockfile: plugin },
 			rules: {
 				'lockfile/version': ['error', { npm: 3 }],
@@ -57,7 +58,8 @@ test('version rule - prefers piped content over on-disk version', skipOnV8, asyn
 		writeFileSync(join(tmpDir, 'package-lock.json'), JSON.stringify({ lockfileVersion: 3 }));
 
 		const eslint = createESLint({
-			...plugin.configs.recommended,
+			// the first recommended block lints the lockfiles themselves
+			...plugin.configs.recommended[0],
 			plugins: { lockfile: plugin },
 			rules: {
 				'lockfile/version': ['error', { npm: 3 }],
@@ -87,7 +89,8 @@ test('integrity rule - preserves internal node_modules/ for nested deps', skipOn
 		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
 
 		const eslint = createESLint({
-			...plugin.configs.recommended,
+			// the first recommended block lints the lockfiles themselves
+			...plugin.configs.recommended[0],
 			plugins: { lockfile: plugin },
 			rules: {
 				'lockfile/integrity': 'error',
@@ -130,7 +133,8 @@ test('integrity rule - reads piped lockfile content via lintText', skipOnV8, asy
 		// No lockfile on disk.
 
 		const eslint = createESLint({
-			...plugin.configs.recommended,
+			// the first recommended block lints the lockfiles themselves
+			...plugin.configs.recommended[0],
 			plugins: { lockfile: plugin },
 			rules: {
 				'lockfile/integrity': 'error',

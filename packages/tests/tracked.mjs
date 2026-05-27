@@ -14,6 +14,10 @@ const skipMalformedOnV8 = eslintMajorVersion < 9
 	? { skip: 'ESLint 8 reads package.json for config and chokes on malformed JSON' }
 	: {};
 
+const skipOnV8 = eslintMajorVersion < 9
+	? { skip: 'requires flat-config languageOptions.parser; not applicable to ESLint 8 legacy config' }
+	: {};
+
 /**
  * Sets up a temp project directory. By default it contains a `.git` marker so
  * the rule's `.gitignore`/`.npmrc` walk stops there (deterministic), plus a
@@ -336,6 +340,24 @@ test('tracked - with no .git marker, the walk terminates at the filesystem root'
 		const messages = await lint(root, ['error', 'npm'], 'index.js');
 		t.equal(messages.length, 1, 'still reports; walk reaches filesystem root without error');
 		t.equal(messages[0].messageId, 'missingPublished');
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+	t.end();
+});
+
+test('tracked - recommended config fires the rule on package.json', skipOnV8, async (t) => {
+	const { root } = setup({ pkg: { name: 'lib' } });
+	try {
+		const eslint = createESLint(
+			plugin.configs.recommended.map((block) => ({ ...block, plugins: { lockfile: plugin } })),
+			root,
+		);
+		const results = await eslint.lintFiles(['package.json']);
+		const fatal = results.flatMap((r) => r.messages).filter((m) => m.fatal);
+		t.deepEqual(fatal, [], 'no fatal/parsing errors on package.json');
+		t.equal(results[0].messages.length, 1, 'rule fires on package.json via recommended');
+		t.equal(results[0].messages[0].messageId, 'missingPublished');
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}

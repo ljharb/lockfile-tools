@@ -200,7 +200,7 @@ export default {
 			description: 'require lockfiles to be tracked in version control, or disabled in config',
 			// @ts-expect-error - `category` was removed from `RulesMetaDocs` in eslint@10 types but is still consumed by eslint-doc-generator
 			category: 'Possible Errors',
-			recommended: false,
+			recommended: true,
 			url: 'https://github.com/ljharb/lockfile-tools/blob/HEAD/packages/eslint-plugin/docs/rules/tracked.md',
 		},
 		schema: [

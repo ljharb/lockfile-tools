@@ -23,10 +23,10 @@ test('recommended config - lints package-lock.json without parser error', skipOn
 			},
 		}));
 
-		const eslint = createESLint({
-			...plugin.configs.recommended,
-			plugins: { lockfile: plugin },
-		}, tmpDir);
+		const eslint = createESLint(
+			plugin.configs.recommended.map((block) => ({ ...block, plugins: { lockfile: plugin } })),
+			tmpDir,
+		);
 
 		const results = await eslint.lintFiles(['package-lock.json']);
 
@@ -46,10 +46,10 @@ test('recommended config - lints yarn.lock without parser error', skipOnV8, asyn
 		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
 		writeFileSync(join(tmpDir, 'yarn.lock'), '# yarn lockfile v1\n\nhas-flag@^4.0.0:\n  version "4.0.0"\n');
 
-		const eslint = createESLint({
-			...plugin.configs.recommended,
-			plugins: { lockfile: plugin },
-		}, tmpDir);
+		const eslint = createESLint(
+			plugin.configs.recommended.map((block) => ({ ...block, plugins: { lockfile: plugin } })),
+			tmpDir,
+		);
 
 		const results = await eslint.lintFiles(['yarn.lock']);
 
@@ -69,10 +69,10 @@ test('recommended config - lints pnpm-lock.yaml without parser error', skipOnV8,
 		writeFileSync(join(tmpDir, 'package.json'), JSON.stringify({ name: 'test' }));
 		writeFileSync(join(tmpDir, 'pnpm-lock.yaml'), "lockfileVersion: '9.0'\n");
 
-		const eslint = createESLint({
-			...plugin.configs.recommended,
-			plugins: { lockfile: plugin },
-		}, tmpDir);
+		const eslint = createESLint(
+			plugin.configs.recommended.map((block) => ({ ...block, plugins: { lockfile: plugin } })),
+			tmpDir,
+		);
 
 		const results = await eslint.lintFiles(['pnpm-lock.yaml']);
 

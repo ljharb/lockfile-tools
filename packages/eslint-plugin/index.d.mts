@@ -1,7 +1,7 @@
 import type { Rule } from 'eslint';
 import type { Plugin } from '@eslint/core';
 
-type RecommendedRules = {
+type LockfileRules = {
     'lockfile/binary-conflicts': 'error',
     'lockfile/flavor': ['error', 'npm'],
     'lockfile/integrity': 'error',
@@ -11,9 +11,19 @@ type RecommendedRules = {
     'lockfile/version': 'error',
 };
 
-type RecommendedConfig = {
+type TrackedRules = {
+    'lockfile/tracked': 'error',
+};
+
+type FlatConfigBlock<R> = {
     files: string[];
-    rules: RecommendedRules;
+    languageOptions: { parser: unknown };
+    rules: R;
+};
+
+type LegacyOverride<R> = {
+    files: string[];
+    rules: R;
 };
 
 declare const config: Plugin & {
@@ -30,11 +40,11 @@ declare const config: Plugin & {
         ]: Rule.RuleModule;
     };
     configs: {
-        /** Flat config for ESLint >= 9 */
-        recommended: RecommendedConfig;
+        /** Flat config for ESLint >= 9 (an array of file-scoped blocks) */
+        recommended: [FlatConfigBlock<LockfileRules>, FlatConfigBlock<TrackedRules>];
         /** Legacy config for ESLint 8 */
         'recommended-legacy': {
-            overrides: [RecommendedConfig];
+            overrides: [LegacyOverride<LockfileRules>, LegacyOverride<TrackedRules>];
         };
     };
 };

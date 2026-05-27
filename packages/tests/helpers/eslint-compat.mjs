@@ -12,13 +12,13 @@ const majorVersion = parseInt(eslintVersion.split('.')[0], 10);
 
 /**
  * Creates ESLint options compatible with both ESLint 8 and ESLint 9
- * @param {Linter.FlatConfig} overrideConfig - The flat config to use
+ * @param {Linter.FlatConfig | Linter.FlatConfig[]} overrideConfig - The flat config (or array of config blocks) to use
  * @param {string} cwd - The working directory
  * @returns {ESLintNS.Options}
  */
 export function createESLintOptions(overrideConfig, cwd) {
 	if (majorVersion >= 9) {
-		// ESLint 9+ uses flat config
+		// ESLint 9+ uses flat config; a config object or array of blocks both work
 		return {
 			overrideConfigFile: true,
 			overrideConfig,
@@ -26,11 +26,13 @@ export function createESLintOptions(overrideConfig, cwd) {
 		};
 	}
 
-	// ESLint 8 uses legacy config format
-	const {
-		plugins,
-		rules,
-	} = overrideConfig;
+	// ESLint 8 uses legacy config format; flatten any array of blocks into a
+	// single set of plugins + rules
+	const blocks = /** @type {Linter.FlatConfig[]} */ ([]).concat(overrideConfig);
+	/** @type {Record<string, ESLintNS.Plugin> | undefined} */
+	const plugins = Object.assign({}, ...blocks.map((block) => block.plugins));
+	/** @type {Linter.RulesRecord} */
+	const rules = Object.assign({}, ...blocks.map((block) => block.rules));
 
 	// Convert flat config plugins to legacy format
 	/** @type {string[]} */
@@ -64,7 +66,7 @@ export function createESLintOptions(overrideConfig, cwd) {
 
 /**
  * Creates an ESLint instance with options compatible with both ESLint 8 and ESLint 9
- * @param {Linter.FlatConfig} config - The flat config to use
+ * @param {Linter.FlatConfig | Linter.FlatConfig[]} config - The flat config (or array of config blocks) to use
  * @param {string} cwd - The working directory
  * @returns {ESLint}
  */

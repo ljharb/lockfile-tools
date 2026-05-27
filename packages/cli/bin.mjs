@@ -71,13 +71,14 @@ function resolveTarget(lockfilePath) {
  * @returns {Linter.RulesRecord}
  */
 function configureRules(options, detectedFlavor) {
+	// `recommended` is an array of file-scoped flat-config blocks; merge their
+	// rules into a single record for the CLI's single lint pass. `tracked` reads
+	// its directory from the linted file, so running it against the lockfile (or
+	// the ESLint 8 temp file) evaluates the lockfile's directory and its sibling
+	// `package.json` - no separate target needed.
 	/** @type {Linter.RulesRecord} */
-	const rules = { ...plugin.configs.recommended.rules };
+	const rules = Object.assign({}, ...plugin.configs.recommended.map((block) => block.rules));
 
-	// Enforce `tracked` from the CLI too. It reads its directory from the linted
-	// file, so running it against the lockfile (or the ESLint 8 temp file)
-	// evaluates the lockfile's directory and its sibling `package.json` - no
-	// separate target needed. Scope it to the lockfile's flavor below.
 	if (options.flavor && options.flavor.length > 0) {
 		const flavor = options.flavor.length === 1 ? options.flavor[0] : options.flavor;
 		rules['lockfile/flavor'] = ['error', flavor];

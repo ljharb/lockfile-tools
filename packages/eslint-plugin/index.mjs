@@ -58,19 +58,31 @@ const rules = {
 	version: versionRule,
 };
 
-/** @type {{ rules: Record<string, Linter.RuleEntry> }} */
-const recommendedRules = {
-	rules: {
-		'lockfile/binary-conflicts': 'error',
-		'lockfile/flavor': ['error', 'npm'],
-		'lockfile/integrity': 'error',
-		'lockfile/non-registry-specifiers': 'error',
-		'lockfile/registry': 'error',
-		'lockfile/shrinkwrap': 'error',
-		'lockfile/version': 'error',
-	},
+// Rules that operate on the lockfiles themselves.
+/** @type {Record<string, Linter.RuleEntry>} */
+const lockfileRules = {
+	'lockfile/binary-conflicts': 'error',
+	'lockfile/flavor': ['error', 'npm'],
+	'lockfile/integrity': 'error',
+	'lockfile/non-registry-specifiers': 'error',
+	'lockfile/registry': 'error',
+	'lockfile/shrinkwrap': 'error',
+	'lockfile/version': 'error',
 };
 
+// The `tracked` rule operates on `package.json` instead of the lockfiles,
+// because it must run whether or not a lockfile exists (e.g. to flag a missing
+// lockfile with no disabling config).
+/** @type {Record<string, Linter.RuleEntry>} */
+const trackedRules = {
+	'lockfile/tracked': 'error',
+};
+
+// Lockfiles and `package.json` need different `files` globs, and a single flat
+// config object only carries one glob - so the flat config is an array of
+// blocks. Exporting an array also lets future blocks be added without a
+// breaking shape change. Neither lockfiles nor `package.json` are JavaScript,
+// so both blocks use the no-op parser.
 /** @const @type {PluginDefault} */
 export default {
 	meta: {
@@ -80,19 +92,32 @@ export default {
 	rules,
 	configs: {
 		// flat config (eslint >= 9)
-		recommended: {
-			files: LOCKFILE_GLOBS,
-			languageOptions: {
-				parser: noopParser,
+		recommended: [
+			{
+				files: LOCKFILE_GLOBS,
+				languageOptions: {
+					parser: noopParser,
+				},
+				rules: lockfileRules,
 			},
-			...recommendedRules,
-		},
+			{
+				files: ['**/package.json'],
+				languageOptions: {
+					parser: noopParser,
+				},
+				rules: trackedRules,
+			},
+		],
 		// legacy config (eslint 8)
 		'recommended-legacy': {
 			overrides: [
 				{
 					files: ALL_LOCKFILES,
-					...recommendedRules,
+					rules: lockfileRules,
+				},
+				{
+					files: ['package.json'],
+					rules: trackedRules,
 				},
 			],
 		},
