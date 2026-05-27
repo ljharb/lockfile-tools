@@ -75,6 +75,9 @@ test('CLI - unknown option shows help', async (t) => {
 test('CLI - missing lockfile', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-empty');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	try {
 		const result = await runCli([join(tempDir, 'nonexistent-lock.json')]);
@@ -91,6 +94,9 @@ test('CLI - missing lockfile', async (t) => {
 test('CLI - no lockfile in directory', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-no-lock');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 	writeFileSync(join(tempDir, 'package.json'), '{}');
 
 	try {
@@ -108,6 +114,9 @@ test('CLI - no lockfile in directory', async (t) => {
 test('CLI - lint valid npm lockfile', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-valid');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -134,6 +143,9 @@ test('CLI - lint valid npm lockfile', async (t) => {
 test('CLI - no temp .js file left behind', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-no-temp');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -162,6 +174,9 @@ test('CLI - no temp .js file left behind', async (t) => {
 test('CLI - lints lockfile directly without parsing error', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-parse');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -220,6 +235,9 @@ test('CLI - algorithms option validation', async (t) => {
 test('CLI - multiple flavor options', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-multi-flavor');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -244,6 +262,9 @@ test('CLI - multiple flavor options', async (t) => {
 test('CLI - custom registry option', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-registry');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -268,6 +289,9 @@ test('CLI - custom registry option', async (t) => {
 test('CLI - custom algorithms option', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-algo');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -292,6 +316,9 @@ test('CLI - custom algorithms option', async (t) => {
 test('CLI - detects wrong lockfile version', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-version');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -317,6 +344,9 @@ test('CLI - detects wrong lockfile version', async (t) => {
 test('CLI - auto-detect lockfile in current directory', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-autodetect');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	const lockfile = {
 		name: 'test-package',
@@ -343,6 +373,9 @@ test('CLI - auto-detect lockfile in current directory', async (t) => {
 test('CLI - lint lockfile with warning-level issues (line 178)', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-warnings');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	// Create a valid lockfile that would only trigger warnings (not errors)
 	// For now, use a lockfile with no issues to verify warnings-only path
@@ -371,6 +404,9 @@ test('CLI - lint lockfile with warning-level issues (line 178)', async (t) => {
 test('CLI - integrity rule reports correct line numbers', async (t) => {
 	const tempDir = join(__dirname, 'temp-cli-test-line-numbers');
 	mkdirSync(tempDir, { recursive: true });
+	// a `.git` marker stops the `tracked` rule's gitignore walk here, so it
+	// evaluates this fixture rather than inheriting the repo's own .gitignore
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
 
 	// Create a valid lockfile with correct integrity but we'll use registry rule to test line numbers
 	// The integrity rule will see this as valid, but registry rule (object config) tests line numbers
@@ -405,6 +441,35 @@ test('CLI - integrity rule reports correct line numbers', async (t) => {
 		t.equal(result.exitCode, 1, 'exits with code 1 for missing integrity');
 		// The integrity rule reports at line 11 where "node_modules/tape" appears
 		t.ok(result.stdout.includes('11:1'), 'integrity error shows correct line number (11)');
+	} finally {
+		rmSync(tempDir, { recursive: true, force: true });
+	}
+
+	t.end();
+});
+
+test('CLI - enforces the `tracked` rule against the lockfile directory', async (t) => {
+	const tempDir = join(__dirname, 'temp-cli-test-tracked');
+	mkdirSync(tempDir, { recursive: true });
+	mkdirSync(join(tempDir, '.git'), { recursive: true });
+
+	// A valid lockfile, but ignored by version control: `tracked` should flag it.
+	const lockfile = {
+		name: 'test-package',
+		version: '1.0.0',
+		lockfileVersion: 3,
+		packages: {},
+	};
+	writeFileSync(join(tempDir, 'package-lock.json'), JSON.stringify(lockfile, null, 2));
+	writeFileSync(join(tempDir, 'package.json'), JSON.stringify({ name: 'test', version: '1.0.0' }));
+	writeFileSync(join(tempDir, '.gitignore'), 'package-lock.json\n');
+
+	try {
+		const result = await runCli([join(tempDir, 'package-lock.json')]);
+
+		t.equal(result.exitCode, 1, 'exits with code 1 for an untracked lockfile');
+		t.ok(result.stdout.includes('lockfile/tracked'), 'the tracked rule fired');
+		t.ok(result.stdout.includes('ignored by version control'), 'reports the lockfile is not tracked');
 	} finally {
 		rmSync(tempDir, { recursive: true, force: true });
 	}

@@ -76,10 +76,18 @@ function configureRules(options, detectedFlavor) {
 	/** @type {Linter.RulesRecord} */
 	const rules = { ...plugin.configs.recommended.rules };
 
+	// Enforce `tracked` from the CLI too. It reads its directory from the linted
+	// file, so running it against the lockfile (or the ESLint 8 temp file)
+	// evaluates the lockfile's directory and its sibling `package.json` - no
+	// separate target needed. Scope it to the lockfile's flavor below.
 	if (options.flavor && options.flavor.length > 0) {
-		rules['lockfile/flavor'] = ['error', options.flavor.length === 1 ? options.flavor[0] : options.flavor];
+		const flavor = options.flavor.length === 1 ? options.flavor[0] : options.flavor;
+		rules['lockfile/flavor'] = ['error', flavor];
+		// scope `tracked` to the same flavor so it checks the relevant lockfile
+		rules['lockfile/tracked'] = ['error', flavor];
 	} else if (detectedFlavor) {
 		rules['lockfile/flavor'] = ['error', detectedFlavor];
+		rules['lockfile/tracked'] = ['error', detectedFlavor];
 	}
 
 	if (options.registry && options.registry.length > 0) {
