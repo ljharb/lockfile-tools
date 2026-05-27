@@ -18,26 +18,24 @@ const {
 } = Object;
 
 /** @import { ESLint as ESLintNS, Linter } from 'eslint' */
-/** @import { PackageManager as PM } from 'lockfile-tools/lib/package-managers.d.mts' */
+/** @import { PackageManager as PM, Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
 
-/** @type {string[]} */
 const LOCKFILE_NAMES = values(PACKAGE_MANAGERS).flatMap((pm) => pm.lockfiles);
 
-/** @type {PM[]} */
-const PACKAGE_MANAGER_NAMES = /** @type {PM[]} */ (keys(PACKAGE_MANAGERS));
+const PACKAGE_MANAGER_NAMES = keys(PACKAGE_MANAGERS);
 
 /**
  * Determines the package manager flavor based on lockfile name
- * @param {string} lockfileName
+ * @param {Lockfile} lockfileName
  * @returns {PM | null}
  */
 function getFlavorFromLockfile(lockfileName) {
 	for (const [flavor, config] of entries(PACKAGE_MANAGERS)) {
-		if (/** @type {readonly string[]} */ (config.lockfiles).includes(lockfileName)) {
-			return /** @type {PM} */ (flavor);
+		if (config.lockfiles.includes(lockfileName)) {
+			return flavor;
 		}
 	}
-	/* istanbul ignore next - defensive: CLI only processes known lockfile names */
+
 	return null;
 }
 
@@ -113,15 +111,13 @@ export async function lintLockfile(lockfilePath, options = {}) {
 	}
 	const { targetLockfile, targetDir } = resolved;
 
-	const lockfileName = basename(targetLockfile);
+	const lockfileName = /** @type {Lockfile} */ (basename(targetLockfile));
 	const detectedFlavor = getFlavorFromLockfile(lockfileName);
 
 	console.log(`Linting lockfile: ${lockfileName}`);
 	console.log(`Directory: ${targetDir}`);
 
-	/** @type {string} */
 	let lintTarget = '';
-	/** @type {boolean} */
 	let tempFileCreated = false;
 
 	try {
@@ -231,7 +227,7 @@ export async function lintLockfile(lockfilePath, options = {}) {
 
 const {
 	help,
-	positionals,
+	positionals: [positional],
 	values: cliValues,
 	errors,
 } = await pargs(import.meta.filename, {
@@ -255,48 +251,39 @@ const {
 	allowPositionals: 1,
 });
 
-const VALID_ALGORITHMS = ['sha1', 'sha256', 'sha384', 'sha512'];
-
-/** @type {(arr: unknown) => string[] | undefined} */
-const toStringArray = (arr) => (Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : undefined);
-
-const flavorValues = toStringArray(cliValues.flavor);
-const registryValues = toStringArray(cliValues.registry);
-const algorithmsValues = toStringArray(cliValues.algorithms);
+const VALID_ALGORITHMS = /** @type {const} */ (['sha1', 'sha256', 'sha384', 'sha512']);
 
 // Validate flavor values
-if (flavorValues) {
-	for (const f of flavorValues) {
-		if (!PACKAGE_MANAGER_NAMES.includes(/** @type {PM} */ (f))) {
-			errors.push(`Invalid flavor: ${f} (valid: ${PACKAGE_MANAGER_NAMES.join(', ')})`);
+if (cliValues.flavor) {
+	for (const f of cliValues.flavor) {
+		if (!PACKAGE_MANAGER_NAMES.includes(f)) {
+			errors[errors.length] = `Invalid flavor: ${f} (valid: ${PACKAGE_MANAGER_NAMES.join(', ')})`;
 		}
 	}
 }
 
-// Validate registry URLs
-if (registryValues) {
-	for (const reg of registryValues) {
+if (cliValues.registry) {
+	for (const reg of cliValues.registry) {
 		if (!(/^https?:\/\//).test(reg)) {
-			errors.push(`Invalid registry URL: ${reg} (must start with http:// or https://)`);
+			errors[errors.length] = `Invalid registry URL: ${reg} (must start with http:// or https://)`;
 		}
 	}
 }
 
-// Validate algorithms
-if (algorithmsValues) {
-	for (const alg of algorithmsValues) {
+if (cliValues.algorithms) {
+	for (const alg of cliValues.algorithms) {
 		if (!VALID_ALGORITHMS.includes(alg)) {
-			errors.push(`Invalid algorithm: ${alg} (valid: ${VALID_ALGORITHMS.join(', ')})`);
+			errors[errors.length] = `Invalid algorithm: ${alg} (valid: ${VALID_ALGORITHMS.join(', ')})`;
 		}
 	}
 }
 
 await help();
 
-const exitCode = await lintLockfile(positionals[0], {
-	flavor: flavorValues,
-	registry: registryValues,
-	algorithms: algorithmsValues,
+const exitCode = await lintLockfile(positional, {
+	flavor: cliValues.flavor,
+	registry: cliValues.registry,
+	algorithms: cliValues.algorithms,
 });
 
 process.exit(exitCode);
