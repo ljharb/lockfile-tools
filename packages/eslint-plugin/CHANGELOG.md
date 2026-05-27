@@ -5,11 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.2.0...1.3.0)
+## [1.4.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.3.0...1.4.0)
+
+### Commits
+
+- [plugin] [new] add `tracked` rule [`2f2bef9`](https://github.com/ljharb/lockfile-tools/commit/2f2bef94be5364b729faba442a7474571428ebe2)
+- [plugin] [deps] update `semver` [`7943ff2`](https://github.com/ljharb/lockfile-tools/commit/7943ff28cd6974bda066dcc6ea7f41a0a78f2e1c)
+
+## [eslint-plugin-lockfile@1.3.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.2.0...eslint-plugin-lockfile@1.3.0) - 2026-05-12
 
 ### Commits
 
 - [cli, plugin, tools] [new] add eslint 10 support [`e067108`](https://github.com/ljharb/lockfile-tools/commit/e067108a452cb39e3cfc8df2fc210506b8d41042)
+- [plugin] v1.3.0 [`6c79f9f`](https://github.com/ljharb/lockfile-tools/commit/6c79f9f0c916480c22785b7381253b1dea24b171)
 - [meta] [new] cover ESLint 8 + 9 across lowest/latest in a CI matrix [`1c1dc21`](https://github.com/ljharb/lockfile-tools/commit/1c1dc21671728ee208625f041790bd7008056471)
 - [plugin] [deps] update `lockfile-tools` [`24ef026`](https://github.com/ljharb/lockfile-tools/commit/24ef0264877f82632073a1f1047def6570ba62c8)
 
