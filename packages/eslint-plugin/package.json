@@ -35,7 +35,7 @@
 		"semver": "^7.8.1"
 	},
 	"devDependencies": {
-		"@arethetypeswrong/cli": "^0.18.2",
+		"@arethetypeswrong/cli": "^0.18.3",
 		"@eslint/core": "^1.2.1",
 		"@ljharb/tsconfig": "^0.3.2",
 		"@types/semver": "^7.7.1",

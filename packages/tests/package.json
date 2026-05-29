@@ -9,7 +9,7 @@
 		"preversion": "echo \"use \\`npm run --no-workspaces version\\` in a subpackage directly\" && exit 1"
 	},
 	"devDependencies": {
-		"@arethetypeswrong/cli": "^0.18.2",
+		"@arethetypeswrong/cli": "^0.18.3",
 		"@istanbuljs/esm-loader-hook": "^0.3.0",
 		"@ljharb/tsconfig": "^0.3.2",
 		"@types/tape": "^5.8.1",
