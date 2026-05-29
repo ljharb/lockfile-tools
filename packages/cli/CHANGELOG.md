@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.2.0...lintlock@1.2.1)
+
+### Commits
+
+- [*] [dev deps] update `auto-changelog` [`ece1324`](https://github.com/ljharb/lockfile-tools/commit/ece13243cee454d275857bdbca15e7e15759c2b5)
+- [plugin] [breaking] make `configs.recommended` an array; enable `tracked` [`dffb367`](https://github.com/ljharb/lockfile-tools/commit/dffb367e7b92020427012d9c8210f1d2d983a899)
+- [*] [dev deps] update `@arethetypeswrong/cli` [`55e2e9c`](https://github.com/ljharb/lockfile-tools/commit/55e2e9c0028bdcebe1c4538078d9a4eea1416738)
+- [cli] [deps] update `eslint-plugin-lockfile` [`d66d8ea`](https://github.com/ljharb/lockfile-tools/commit/d66d8ea2603709cfb6edd61e049d60ea956907ef)
+
 ## [1.2.0](https://github.com/ljharb/lockfile-tools/compare/lintlock@1.1.0...lintlock@1.2.0) - 2026-05-27
 
 ### Commits
