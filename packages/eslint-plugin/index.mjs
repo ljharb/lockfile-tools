@@ -4,6 +4,7 @@ import integrity from './rules/integrity.mjs';
 import manifestSync from './rules/manifest-sync.mjs';
 import nameMatchesResolved from './rules/name-matches-resolved.mjs';
 import noInstallScripts from './rules/no-install-scripts.mjs';
+import noWeakeningConfig from './rules/no-weakening-config.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
 import shrinkwrap from './rules/shrinkwrap.mjs';
@@ -57,6 +58,7 @@ const rules = {
 	'manifest-sync': manifestSync,
 	'name-matches-resolved': nameMatchesResolved,
 	'no-install-scripts': noInstallScripts,
+	'no-weakening-config': noWeakeningConfig,
 	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
 	shrinkwrap,
@@ -79,11 +81,13 @@ const lockfileRules = {
 	'lockfile/version': 'error',
 };
 
-// The `tracked` rule operates on `package.json` instead of the lockfiles,
-// because it must run whether or not a lockfile exists (e.g. to flag a missing
-// lockfile with no disabling config).
+// These rules operate on `package.json` instead of the lockfiles: `tracked`
+// must run whether or not a lockfile exists (e.g. to flag a missing lockfile
+// with no disabling config), and `no-weakening-config` inspects sibling config
+// files (`.npmrc`, `.yarnrc.yml`) rather than any single lockfile.
 /** @type {Record<string, Linter.RuleEntry>} */
-const trackedRules = {
+const packageJsonRules = {
+	'lockfile/no-weakening-config': 'error',
 	'lockfile/tracked': 'error',
 };
 
@@ -114,7 +118,7 @@ export default {
 				languageOptions: {
 					parser: noopParser,
 				},
-				rules: trackedRules,
+				rules: packageJsonRules,
 			},
 		],
 		// legacy config (eslint 8)
@@ -126,7 +130,7 @@ export default {
 				},
 				{
 					files: ['package.json'],
-					rules: trackedRules,
+					rules: packageJsonRules,
 				},
 			],
 		},

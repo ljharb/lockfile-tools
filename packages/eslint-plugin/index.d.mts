@@ -14,7 +14,8 @@ type LockfileRules = {
     'lockfile/version': 'error',
 };
 
-type TrackedRules = {
+type PackageJsonRules = {
+    'lockfile/no-weakening-config': 'error',
     'lockfile/tracked': 'error',
 };
 
@@ -38,6 +39,7 @@ declare const config: Plugin & {
             | 'manifest-sync'
             | 'name-matches-resolved'
             | 'no-install-scripts'
+            | 'no-weakening-config'
             | 'non-registry-specifiers'
             | 'registry'
             | 'shrinkwrap'
@@ -47,10 +49,10 @@ declare const config: Plugin & {
     };
     configs: {
         /** Flat config for ESLint >= 9 (an array of file-scoped blocks) */
-        recommended: [FlatConfigBlock<LockfileRules>, FlatConfigBlock<TrackedRules>];
+        recommended: [FlatConfigBlock<LockfileRules>, FlatConfigBlock<PackageJsonRules>];
         /** Legacy config for ESLint 8 */
         'recommended-legacy': {
-            overrides: [LegacyOverride<LockfileRules>, LegacyOverride<TrackedRules>];
+            overrides: [LegacyOverride<LockfileRules>, LegacyOverride<PackageJsonRules>];
         };
     };
 };
