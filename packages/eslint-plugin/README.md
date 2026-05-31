@@ -82,6 +82,7 @@ export default [
 | [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages                             | ✅ ![badge-recommended-legacy][] |
 | [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                                          | ✅ ![badge-recommended-legacy][] |
 | [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                                     | ✅ ![badge-recommended-legacy][] |
+| [name-matches-resolved](docs/rules/name-matches-resolved.md)     | enforce that a package's resolved registry URL matches its name           | ✅ ![badge-recommended-legacy][] |
 | [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources                            | ✅ ![badge-recommended-legacy][] |
 | [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                                   | ✅ ![badge-recommended-legacy][] |
 | [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json                   | ✅ ![badge-recommended-legacy][] |

@@ -1,6 +1,7 @@
 import binaryConflicts from './rules/binary-conflicts.mjs';
 import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
+import nameMatchesResolved from './rules/name-matches-resolved.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
 import shrinkwrap from './rules/shrinkwrap.mjs';
@@ -51,6 +52,7 @@ const rules = {
 	'binary-conflicts': binaryConflicts,
 	flavor,
 	integrity,
+	'name-matches-resolved': nameMatchesResolved,
 	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
 	shrinkwrap,
@@ -64,6 +66,7 @@ const lockfileRules = {
 	'lockfile/binary-conflicts': 'error',
 	'lockfile/flavor': ['error', 'npm'],
 	'lockfile/integrity': 'error',
+	'lockfile/name-matches-resolved': 'error',
 	'lockfile/non-registry-specifiers': 'error',
 	'lockfile/registry': 'error',
 	'lockfile/shrinkwrap': 'error',
