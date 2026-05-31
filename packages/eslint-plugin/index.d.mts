@@ -6,6 +6,7 @@ type LockfileRules = {
     'lockfile/flavor': ['error', 'npm'],
     'lockfile/integrity': 'error',
     'lockfile/manifest-sync': 'error',
+    'lockfile/minimum-release-age': 'error',
     'lockfile/name-matches-resolved': 'error',
     'lockfile/no-install-scripts': 'error',
     'lockfile/non-registry-specifiers': 'error',
@@ -37,6 +38,7 @@ declare const config: Plugin & {
             | 'flavor'
             | 'integrity'
             | 'manifest-sync'
+            | 'minimum-release-age'
             | 'name-matches-resolved'
             | 'no-install-scripts'
             | 'no-weakening-config'

@@ -2,6 +2,7 @@ import binaryConflicts from './rules/binary-conflicts.mjs';
 import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
 import manifestSync from './rules/manifest-sync.mjs';
+import minimumReleaseAge from './rules/minimum-release-age.mjs';
 import nameMatchesResolved from './rules/name-matches-resolved.mjs';
 import noInstallScripts from './rules/no-install-scripts.mjs';
 import noWeakeningConfig from './rules/no-weakening-config.mjs';
@@ -56,6 +57,7 @@ const rules = {
 	flavor,
 	integrity,
 	'manifest-sync': manifestSync,
+	'minimum-release-age': minimumReleaseAge,
 	'name-matches-resolved': nameMatchesResolved,
 	'no-install-scripts': noInstallScripts,
 	'no-weakening-config': noWeakeningConfig,
@@ -73,6 +75,7 @@ const lockfileRules = {
 	'lockfile/flavor': ['error', 'npm'],
 	'lockfile/integrity': 'error',
 	'lockfile/manifest-sync': 'error',
+	'lockfile/minimum-release-age': 'error',
 	'lockfile/name-matches-resolved': 'error',
 	'lockfile/no-install-scripts': 'error',
 	'lockfile/non-registry-specifiers': 'error',

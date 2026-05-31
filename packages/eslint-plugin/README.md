@@ -77,20 +77,21 @@ export default [
 💼 Configurations enabled in.\
 ✅ Set in the `recommended` configuration.
 
-| Name                                                             | Description                                                                   | 💼                              |
-| :--------------------------------------------------------------- | :---------------------------------------------------------------------------- | :------------------------------ |
-| [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages                                 | ✅ ![badge-recommended-legacy][] |
-| [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                                              | ✅ ![badge-recommended-legacy][] |
-| [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                                         | ✅ ![badge-recommended-legacy][] |
-| [manifest-sync](docs/rules/manifest-sync.md)                     | enforce that a lockfile stays in sync with its package.json                   | ✅ ![badge-recommended-legacy][] |
-| [name-matches-resolved](docs/rules/name-matches-resolved.md)     | enforce that a package's resolved registry URL matches its name               | ✅ ![badge-recommended-legacy][] |
-| [no-install-scripts](docs/rules/no-install-scripts.md)           | disallow packages that run install scripts unless explicitly allowed          | ✅ ![badge-recommended-legacy][] |
-| [no-weakening-config](docs/rules/no-weakening-config.md)         | disallow configuration that weakens lockfile and install integrity guarantees | ✅ ![badge-recommended-legacy][] |
-| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources                                | ✅ ![badge-recommended-legacy][] |
-| [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                                       | ✅ ![badge-recommended-legacy][] |
-| [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json                       | ✅ ![badge-recommended-legacy][] |
-| [tracked](docs/rules/tracked.md)                                 | require lockfiles to be tracked in version control, or disabled in config     | ✅ ![badge-recommended-legacy][] |
-| [version](docs/rules/version.md)                                 | enforce lockfile version                                                      | ✅ ![badge-recommended-legacy][] |
+| Name                                                             | Description                                                                                | 💼                              |
+| :--------------------------------------------------------------- | :----------------------------------------------------------------------------------------- | :------------------------------ |
+| [binary-conflicts](docs/rules/binary-conflicts.md)               | detect binary name conflicts between packages                                              | ✅ ![badge-recommended-legacy][] |
+| [flavor](docs/rules/flavor.md)                                   | enforce allowed lockfile formats                                                           | ✅ ![badge-recommended-legacy][] |
+| [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                                                      | ✅ ![badge-recommended-legacy][] |
+| [manifest-sync](docs/rules/manifest-sync.md)                     | enforce that a lockfile stays in sync with its package.json                                | ✅ ![badge-recommended-legacy][] |
+| [minimum-release-age](docs/rules/minimum-release-age.md)         | disallow dependencies whose version was published more recently than a minimum release age | ✅ ![badge-recommended-legacy][] |
+| [name-matches-resolved](docs/rules/name-matches-resolved.md)     | enforce that a package's resolved registry URL matches its name                            | ✅ ![badge-recommended-legacy][] |
+| [no-install-scripts](docs/rules/no-install-scripts.md)           | disallow packages that run install scripts unless explicitly allowed                       | ✅ ![badge-recommended-legacy][] |
+| [no-weakening-config](docs/rules/no-weakening-config.md)         | disallow configuration that weakens lockfile and install integrity guarantees              | ✅ ![badge-recommended-legacy][] |
+| [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources                                             | ✅ ![badge-recommended-legacy][] |
+| [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                                                    | ✅ ![badge-recommended-legacy][] |
+| [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json                                    | ✅ ![badge-recommended-legacy][] |
+| [tracked](docs/rules/tracked.md)                                 | require lockfiles to be tracked in version control, or disabled in config                  | ✅ ![badge-recommended-legacy][] |
+| [version](docs/rules/version.md)                                 | enforce lockfile version                                                                   | ✅ ![badge-recommended-legacy][] |
 
 <!-- end auto-generated rules list -->
 
