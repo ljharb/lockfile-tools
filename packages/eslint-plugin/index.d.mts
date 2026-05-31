@@ -5,6 +5,7 @@ type LockfileRules = {
     'lockfile/binary-conflicts': 'error',
     'lockfile/flavor': ['error', 'npm'],
     'lockfile/integrity': 'error',
+    'lockfile/manifest-sync': 'error',
     'lockfile/name-matches-resolved': 'error',
     'lockfile/non-registry-specifiers': 'error',
     'lockfile/registry': 'error',
@@ -33,6 +34,7 @@ declare const config: Plugin & {
             | 'binary-conflicts'
             | 'flavor'
             | 'integrity'
+            | 'manifest-sync'
             | 'name-matches-resolved'
             | 'non-registry-specifiers'
             | 'registry'

@@ -31,6 +31,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 	{
 		files: ['packages/tests/**'],
 		rules: {
+			'max-nested-callbacks': 'off',
 			'max-statements-per-line': 'off',
 		},
 	},
