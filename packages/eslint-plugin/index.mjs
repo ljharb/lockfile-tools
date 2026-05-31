@@ -3,6 +3,7 @@ import flavor from './rules/flavor.mjs';
 import integrity from './rules/integrity.mjs';
 import manifestSync from './rules/manifest-sync.mjs';
 import nameMatchesResolved from './rules/name-matches-resolved.mjs';
+import noInstallScripts from './rules/no-install-scripts.mjs';
 import nonRegistrySpecifiers from './rules/non-registry-specifiers.mjs';
 import registry from './rules/registry.mjs';
 import shrinkwrap from './rules/shrinkwrap.mjs';
@@ -55,6 +56,7 @@ const rules = {
 	integrity,
 	'manifest-sync': manifestSync,
 	'name-matches-resolved': nameMatchesResolved,
+	'no-install-scripts': noInstallScripts,
 	'non-registry-specifiers': nonRegistrySpecifiers,
 	registry,
 	shrinkwrap,
@@ -70,6 +72,7 @@ const lockfileRules = {
 	'lockfile/integrity': 'error',
 	'lockfile/manifest-sync': 'error',
 	'lockfile/name-matches-resolved': 'error',
+	'lockfile/no-install-scripts': 'error',
 	'lockfile/non-registry-specifiers': 'error',
 	'lockfile/registry': 'error',
 	'lockfile/shrinkwrap': 'error',

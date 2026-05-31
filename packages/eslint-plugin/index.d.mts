@@ -7,6 +7,7 @@ type LockfileRules = {
     'lockfile/integrity': 'error',
     'lockfile/manifest-sync': 'error',
     'lockfile/name-matches-resolved': 'error',
+    'lockfile/no-install-scripts': 'error',
     'lockfile/non-registry-specifiers': 'error',
     'lockfile/registry': 'error',
     'lockfile/shrinkwrap': 'error',
@@ -36,6 +37,7 @@ declare const config: Plugin & {
             | 'integrity'
             | 'manifest-sync'
             | 'name-matches-resolved'
+            | 'no-install-scripts'
             | 'non-registry-specifiers'
             | 'registry'
             | 'shrinkwrap'

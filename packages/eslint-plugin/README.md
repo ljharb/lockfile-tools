@@ -84,6 +84,7 @@ export default [
 | [integrity](docs/rules/integrity.md)                             | enforce integrity values in lockfiles                                     | ✅ ![badge-recommended-legacy][] |
 | [manifest-sync](docs/rules/manifest-sync.md)                     | enforce that a lockfile stays in sync with its package.json               | ✅ ![badge-recommended-legacy][] |
 | [name-matches-resolved](docs/rules/name-matches-resolved.md)     | enforce that a package's resolved registry URL matches its name           | ✅ ![badge-recommended-legacy][] |
+| [no-install-scripts](docs/rules/no-install-scripts.md)           | disallow packages that run install scripts unless explicitly allowed      | ✅ ![badge-recommended-legacy][] |
 | [non-registry-specifiers](docs/rules/non-registry-specifiers.md) | warn on dependencies from non-registry sources                            | ✅ ![badge-recommended-legacy][] |
 | [registry](docs/rules/registry.md)                               | enforce allowed registries in lockfiles                                   | ✅ ![badge-recommended-legacy][] |
 | [shrinkwrap](docs/rules/shrinkwrap.md)                           | detect dependencies that include an npm-shrinkwrap.json                   | ✅ ![badge-recommended-legacy][] |
