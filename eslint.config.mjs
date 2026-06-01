@@ -23,7 +23,7 @@ export default /** @type {import('eslint').Linter.Config} */ ([
 		rules: {
 			eqeqeq: ['error', 'allow-null'],
 			'max-depth': 'off',
-			'max-nested-callbacks': 'warn',
+			'max-nested-callbacks': 'off',
 			'no-magic-numbers': 'off',
 			'no-negated-condition': 'warn',
 		},
