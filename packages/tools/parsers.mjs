@@ -4,21 +4,17 @@
 
 import { loadLockfileContent, getLockfileName } from './io.mjs';
 
+/**
+ * @import {
+ * 	parseYarnLockfile as ParseYarnLockfile,
+ * 	parsePnpmLockfile as ParsePnpmLockfile,
+ * 	YarnLockfileEntry,
+ * 	PnpmLockfileEntry,
+ * } from './parsers.d.mts'
+ */
 /** @import { Lockfile } from './lib/package-managers.d.mts' */
 
-/**
- * @typedef {Object} YarnLockfileEntry
- * @property {string} name - Package name
- * @property {string | null} resolved - Resolved URL
- * @property {string | null} integrity - Integrity hash
- * @property {number} line - Line number where this entry starts (1-indexed)
- * @property {Record<string, string | null>} [otherFields] - Additional parsed fields
- */
-
-/**
- * Generic Yarn lockfile parser
- * @type {(content: string, fieldsToExtract?: string[]) => YarnLockfileEntry[]}
- */
+/** @type {typeof ParseYarnLockfile} */
 export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integrity']) {
 	/** @type {YarnLockfileEntry[]} */
 	const parsedEntries = [];
@@ -73,19 +69,7 @@ export function parseYarnLockfile(content, fieldsToExtract = ['resolved', 'integ
 	return parsedEntries;
 }
 
-/**
- * @typedef {Object} PnpmLockfileEntry
- * @property {string} name - Package name
- * @property {string | null} resolved - Resolved URL (tarball)
- * @property {string | null} integrity - Integrity hash
- * @property {number} line - Line number where this entry starts (1-indexed)
- * @property {Record<string, string | null>} [otherFields] - Additional parsed fields
- */
-
-/**
- * Generic Pnpm lockfile parser
- * @type {(content: string, fieldsToExtract?: string[]) => PnpmLockfileEntry[]}
- */
+/** @type {typeof ParsePnpmLockfile} */
 export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integrity']) {
 	/** @type {PnpmLockfileEntry[]} */
 	const parsedEntries = [];
@@ -163,14 +147,20 @@ export function parsePnpmLockfile(content, fieldsToExtract = ['tarball', 'integr
 	return parsedEntries;
 }
 
+/*
+ * `createLockfileExtractor` is generic and its body needs to refer to the type
+ * parameter `T` (in the `makeEmpty` default), which can't be named under the
+ * `@type`-binding pattern, so it stays a generic `function` whose JSDoc mirrors
+ * the declaration in `parsers.d.mts` (keep the two in sync).
+ */
 /**
- * Creates a lockfile extraction dispatcher that automatically handles different lockfile formats
  * @template T
- * @param {Object.<Lockfile, (content: string, ...args: unknown[]) => T>} extractors - Map of lockfile names to extractor functions
- * @param {((filepath: string, ...args: unknown[]) => T) | null} [bunLockbExtractor] - Special extractor for binary bun.lockb
+ * @template {readonly unknown[]} [A=[]]
+ * @param {{ [lockfile in Lockfile]?: (content: string, ...args: A) => T }} extractors - Map of lockfile names to extractor functions
+ * @param {((filepath: string, ...args: A) => T) | null} [bunLockbExtractor] - Special extractor for binary bun.lockb
  * @param {(filepath: string) => string | null} [getContent] - Optional content loader; defaults to reading from disk
  * @param {() => T} [makeEmpty] - Factory for the value returned when no content / no extractor is available; defaults to an empty array (back-compat).
- * @returns {(filepath: string, ...args: unknown[]) => T}
+ * @returns {(filepath: string, ...args: A) => T}
  */
 export function createLockfileExtractor(
 	extractors,

@@ -1,21 +1,17 @@
+/**
+ * @import {
+ * 	normalizeRegistry as NormalizeRegistry,
+ * 	extractRegistryFromUrl as ExtractRegistryFromUrl
+ * } from './registry.d.mts'
+ */
 /** @import { RegistryURL } from './lib/types.d.ts' */
 
-/**
- * Normalizes a registry URL by removing trailing slashes
- * @param {string} url - Registry URL
- * @returns {RegistryURL} Normalized URL
- */
+/** @type {typeof NormalizeRegistry} */
 export function normalizeRegistry(url) {
 	return /** @type {RegistryURL} */ (url.replace(/\/$/, ''));
 }
 
-/**
- * Extracts registry URL from a resolved package URL
- * Handles both standard registries (e.g., https://registry.npmjs.org)
- * and path-based registries (e.g., https://artifacts.example.com/api/npm/npm-repo)
- * @param {string} resolved - Resolved package URL (e.g., https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz)
- * @returns {RegistryURL | null} Registry URL or null if invalid
- */
+/** @type {typeof ExtractRegistryFromUrl} */
 export function extractRegistryFromUrl(resolved) {
 	try {
 		const url = new URL(resolved);
@@ -24,13 +20,12 @@ export function extractRegistryFromUrl(resolved) {
 		// Find the /-/ separator which marks the start of the tarball path
 		const tarballSeparatorIndex = url.pathname.indexOf('/-/');
 		if (tarballSeparatorIndex !== -1) {
-			// Extract everything before /-/ as part of the registry path
+			// Everything before /-/ is the registry path plus the package name
 			const pathBeforeTarball = url.pathname.slice(0, tarballSeparatorIndex);
-			// Remove the package name from the end to get the registry path
-			// Package names can be scoped (@scope/pkg) or unscoped (pkg)
+			// Remove the package name from the end to get the registry path.
+			// Package names can be scoped (@scope/pkg) or unscoped (pkg).
 			const lastSlash = pathBeforeTarball.lastIndexOf('/');
 			if (lastSlash !== -1) {
-				// Check if it's a scoped package
 				const potentialScope = pathBeforeTarball.slice(0, lastSlash);
 				const scopeSlash = potentialScope.lastIndexOf('/');
 				if (scopeSlash !== -1 && pathBeforeTarball.slice(scopeSlash + 1, lastSlash).startsWith('@')) {
@@ -44,8 +39,8 @@ export function extractRegistryFromUrl(resolved) {
 			}
 		}
 
-		// Fallback: just return protocol + host for http(s) URLs only
-		// Non-registry schemes (git+ssh, git+https, git, file, etc.) should return null
+		// Fallback: just return protocol + host for http(s) URLs only.
+		// Non-registry schemes (git+ssh, git+https, git, file, etc.) return null.
 		if (url.protocol === 'https:' || url.protocol === 'http:') {
 			return /** @type {RegistryURL} */ (`${url.protocol}//${url.host}`);
 		}

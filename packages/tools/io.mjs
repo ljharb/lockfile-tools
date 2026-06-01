@@ -6,9 +6,16 @@ import { readFileSync, existsSync } from 'fs';
 import { basename } from 'path';
 import { parse as parseBunLockb } from '@hyrious/bun.lockb';
 
-/** @import { Lockfile, LockfilesFor, PackageManager as PM } from './lib/package-managers.d.mts' */
+/**
+ * @import {
+ *	loadLockfileContent as LoadLockfileContent,
+ *	loadBunLockbContent as LoadBunLockbContent,
+ *	getLockfileName as GetLockfileName,
+ *	findJsonKeyLine as FindJsonKeyLine,
+ * } from './io.d.mts' */
+/** @import { Lockfile } from './lib/package-managers.d.mts' */
 
-/** @type {(filepath: string) => string | null} */
+/** @type {typeof LoadLockfileContent} */
 export function loadLockfileContent(filepath) {
 	try {
 		return readFileSync(filepath, 'utf8');
@@ -17,7 +24,7 @@ export function loadLockfileContent(filepath) {
 	}
 }
 
-/** @type {(filepath: string) => string | null} */
+/** @type {typeof LoadBunLockbContent} */
 export function loadBunLockbContent(filepath) {
 	if (!existsSync(filepath)) {
 		return null;
@@ -26,17 +33,12 @@ export function loadBunLockbContent(filepath) {
 	return parseBunLockb(buffer);
 }
 
-/** @type {<P extends PM = PM>(filepath: string) => LockfilesFor<P>} */
+/** @type {typeof GetLockfileName} */
 export function getLockfileName(filepath) {
 	return /** @type {Lockfile} */ (basename(filepath));
 }
 
-/**
- * Finds the line number of a JSON key in content
- * @param {string} content - The file content
- * @param {string} key - The key to find (e.g., "node_modules/tape")
- * @returns {number} - Line number (1-indexed), or 0 if not found
- */
+/** @type {typeof FindJsonKeyLine} */
 export function findJsonKeyLine(content, key) {
 	const lines = content.split('\n');
 	// Escape special regex characters in the key

@@ -11,29 +11,16 @@ import { PACKAGE_MANAGERS } from './lib/package-managers.mjs';
 
 const { values } = Object;
 
-/**
- * @typedef {Object} VirtualPackageInfo
- * @property {string} name - Package name
- * @property {string} version - Package version
- * @property {string | null} resolved - Resolved tarball URL
- * @property {string | null} integrity - Package integrity hash
- * @property {boolean} isDirect - Whether this is a direct dependency
- */
+/** @import { hasLockfile as HasLockfile, buildVirtualLockfile as BuildVirtualLockfile } from './virtual.d.mts' */
 
 const lockfiles = values(PACKAGE_MANAGERS).flatMap((x) => x.lockfiles);
 
-/**
- * Check if any lockfile exists in the directory
- * @type {(dir: string) => boolean}
- */
+/** @type {typeof HasLockfile} */
 export function hasLockfile(dir) {
 	return lockfiles.some((lockfile) => existsSync(join(dir, lockfile)));
 }
 
-/**
- * Build a virtual dependency tree using arborist and extract package information
- * @type {(dir: string) => Promise<VirtualPackageInfo[]>}
- */
+/** @type {typeof BuildVirtualLockfile} */
 export async function buildVirtualLockfile(dir) {
 	/** @type {Set<string>} */
 	const directDeps = new Set();

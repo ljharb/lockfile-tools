@@ -6,15 +6,16 @@ import { forEachMember, getMember } from './json-ast.mjs';
 
 const { entries } = Object;
 
-/** @import { LockfileDependencyEntry, LockfileDependenciesRecord } from './lib/types.d.ts' */
-/** @import { MemberNode, ValueNode } from '@humanwhocodes/momoa' */
-
 /**
- * Recursively traverses npm lockfile v1 dependencies
- * @param {LockfileDependenciesRecord} deps - Dependencies object
- * @param {(name: string, dep: LockfileDependencyEntry) => void} callback - Called for each dependency
- * @param {string} [prefix=''] - Current path prefix for nested dependencies
+ * @import {
+ * 	traverseDependencies as TraverseDependencies,
+ * 	traverseDependenciesAST as TraverseDependenciesAST,
+ * 	forEachNpmPackagesMember as ForEachNpmPackagesMember,
+ * 	extractPackageName as ExtractPackageName,
+ * } from './npm.d.mts'
  */
+
+/** @type {typeof TraverseDependencies} */
 export function traverseDependencies(deps, callback, prefix = '') {
 	entries(deps).forEach(([name, dep]) => {
 		const fullName = prefix ? `${prefix}/${name}` : name;
@@ -26,15 +27,7 @@ export function traverseDependencies(deps, callback, prefix = '') {
 	});
 }
 
-/**
- * Recursively traverses an npm lockfile v1 `dependencies` object as a momoa
- * AST. Each callback receives the dependency Member node (so the caller can
- * inspect its source line and walk its value) and the joined `parent/child`
- * full name.
- * @param {ValueNode | null | undefined} depsObj
- * @param {(member: MemberNode, fullName: string) => void} callback
- * @param {string} [prefix='']
- */
+/** @type {typeof TraverseDependenciesAST} */
 export function traverseDependenciesAST(depsObj, callback, prefix = '') {
 	forEachMember(depsObj, (member, name) => {
 		const fullName = prefix ? `${prefix}/${name}` : name;
@@ -44,13 +37,7 @@ export function traverseDependenciesAST(depsObj, callback, prefix = '') {
 	});
 }
 
-/**
- * Iterates the `packages` object of an npm lockfile v2/v3 (a momoa AST),
- * skipping the root entry and workspace symlinks. Yields each package
- * Member node with its lockfile key (e.g. `node_modules/@scope/pkg`).
- * @param {ValueNode | null | undefined} packagesObj
- * @param {(member: MemberNode, key: string) => void} callback
- */
+/** @type {typeof ForEachNpmPackagesMember} */
 export function forEachNpmPackagesMember(packagesObj, callback) {
 	forEachMember(packagesObj, (member, key) => {
 		if (key === '') {
@@ -70,10 +57,7 @@ export function forEachNpmPackagesMember(packagesObj, callback) {
 	});
 }
 
-/**
- * Extracts package name from a lockfile key or dependency name
- * @type {(key: string) => string}
- */
+/** @type {typeof ExtractPackageName} */
 export function extractPackageName(key) {
 	// For npm v2/v3: node_modules/package-name or node_modules/@scope/package-name
 	const nodeModulesMatch = key.match(/node_modules\/(@?[^/]+(?:\/[^/]+)?)/);

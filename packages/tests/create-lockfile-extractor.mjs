@@ -88,10 +88,9 @@ test('createLockfileExtractor - extra args are forwarded to extractors', (t) => 
 });
 
 test('createLockfileExtractor - extra args are forwarded to bunLockbExtractor', (t) => {
-	const extract = createLockfileExtractor(
-		{},
-		(filepath, ...rest) => ({ filepath, rest }),
-	);
+	/** @type {(filepath: string, ...rest: [string, number]) => { filepath: string, rest: [string, number] }} */
+	const bunExtractor = (filepath, ...rest) => ({ filepath, rest });
+	const extract = createLockfileExtractor({}, bunExtractor);
 
 	const out = extract('/x/bun.lockb', 'arg1', 42);
 	t.deepEqual(out, { filepath: '/x/bun.lockb', rest: ['arg1', 42] }, 'extra args reach the bun extractor');

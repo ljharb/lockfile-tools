@@ -8,7 +8,7 @@
 	"description": "Monorepo for tools to validate and secure your npm ecosystem lockfiles",
 	"scripts": {
 		"lint": "eslint --ext=js,mjs .",
-		"postlint": "tsc",
+		"postlint": "tsc && attw --pack packages/tools --profile esm-only",
 		"pretest": "npm run lint",
 		"tests-only": "npm run --if-present tests-only --workspaces",
 		"test": "npm run tests-only",
@@ -23,6 +23,7 @@
 	"author": "Jordan Harband <ljharb@gmail.com>",
 	"license": "MIT",
 	"devDependencies": {
+		"@arethetypeswrong/cli": "^0.18.3",
 		"@ljharb/eslint-config": "^22.2.3",
 		"@ljharb/tsconfig": "^0.3.2",
 		"@types/node": "^22.19.18",
