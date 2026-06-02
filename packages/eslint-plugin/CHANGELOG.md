@@ -5,12 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.4.0...eslint-plugin-lockfile@2.0.0)
+## [2.1.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@2.0.0...eslint-plugin-lockfile@2.1.0)
+
+### Commits
+
+- [plugin] [new] add `minimum-release-age` rule [`7ca05d9`](https://github.com/ljharb/lockfile-tools/commit/7ca05d9b7231ac291c808c3a15ffa436212b2a98)
+- [plugin] [new] add `manifest-sync` rule [`f06a3cd`](https://github.com/ljharb/lockfile-tools/commit/f06a3cdee0daf1efaac374a584f06035553b10d4)
+- [plugin] [new] add `no-install-scripts` rule [`3b13410`](https://github.com/ljharb/lockfile-tools/commit/3b1341019183884e336387426ab624661832893f)
+- [plugin] [new] add `name-matches-resolved` rule [`151161a`](https://github.com/ljharb/lockfile-tools/commit/151161a456a890a7d59f49d44fa01b0da6ce70fe)
+- [plugin] [new] add `no-weakening-config` rule [`b0c6c1d`](https://github.com/ljharb/lockfile-tools/commit/b0c6c1dd1aab0a38d8578e726317335d78a896e5)
+
+## [2.0.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.4.0...eslint-plugin-lockfile@2.0.0) - 2026-05-29
 
 ### Commits
 
 - [plugin] [breaking] make `configs.recommended` an array; enable `tracked` [`dffb367`](https://github.com/ljharb/lockfile-tools/commit/dffb367e7b92020427012d9c8210f1d2d983a899)
 - [*] [dev deps] update `auto-changelog` [`ece1324`](https://github.com/ljharb/lockfile-tools/commit/ece13243cee454d275857bdbca15e7e15759c2b5)
+- [plugin] v2.0.0 [`4a271a7`](https://github.com/ljharb/lockfile-tools/commit/4a271a79153747e7010af4f0eeb0804afb415e31)
 - [*] [dev deps] update `@arethetypeswrong/cli` [`55e2e9c`](https://github.com/ljharb/lockfile-tools/commit/55e2e9c0028bdcebe1c4538078d9a4eea1416738)
 
 ## [1.4.0](https://github.com/ljharb/lockfile-tools/compare/eslint-plugin-lockfile@1.3.0...eslint-plugin-lockfile@1.4.0) - 2026-05-27
