@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.3.0...lockfile-tools@1.3.1)
+
+### Commits
+
+- [tools] [meta] ship proper `.d.mts` types [`100a5b7`](https://github.com/ljharb/lockfile-tools/commit/100a5b78aaf5fe65c5125a94486fa795e2fbf87f)
+- [*] [dev deps] update `auto-changelog` [`ece1324`](https://github.com/ljharb/lockfile-tools/commit/ece13243cee454d275857bdbca15e7e15759c2b5)
+
 ## [1.3.0](https://github.com/ljharb/lockfile-tools/compare/lockfile-tools@1.2.0...lockfile-tools@1.3.0) - 2026-05-12
 
 ### Commits
