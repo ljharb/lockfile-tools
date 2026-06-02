@@ -333,11 +333,31 @@ test('no-install-scripts - npm >= 11.16 with no approvals flags scripted package
 });
 
 test('no-install-scripts - a malformed package.json disables native approvals', async (t) => {
-	const messages = await run({
-		'package.json': '{ not valid json',
-		'package-lock.json': scriptedEsbuild,
-	});
-	t.equal(messages.length, 1, 'a malformed package.json is ignored; the package is still flagged');
+	// invoke the rule directly rather than via the ESLint pipeline: ESLint 8's
+	// legacy config loader reads `package.json`, so a deliberately-malformed one
+	// would make ESLint itself throw before the rule runs.
+	const dir = mkdtempSync(join(tmpdir(), 'eslint-plugin-lockfile-nis-badpkg-'));
+	try {
+		writeFileSync(join(dir, 'package.json'), '{ not valid json');
+		writeFileSync(join(dir, 'package-lock.json'), scriptedEsbuild);
+		/** @type {{ messageId?: string }[]} */
+		const reports = [];
+		const context = {
+			filename: join(dir, 'index.js'),
+			options: [],
+			/** @param {{ messageId?: string }} info */
+			report(info) {
+				reports.push(info);
+			},
+		};
+		const rule = await esmock('eslint-plugin-lockfile/rules/no-install-scripts.mjs');
+		// eslint-disable-next-line new-cap
+		rule.create(context).Program({ type: 'Program' });
+		t.equal(reports.length, 1, 'a malformed package.json is ignored; the package is still flagged');
+		t.equal(reports[0].messageId, 'installScript');
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
 	t.end();
 });
 
