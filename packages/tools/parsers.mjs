@@ -166,7 +166,7 @@ export function createLockfileExtractor(
 	extractors,
 	bunLockbExtractor = null,
 	getContent = loadLockfileContent,
-	makeEmpty = /** @type {() => T} */ (() => /** @type {T} */ ([])),
+	makeEmpty = /** @type {() => T} */ (() => []),
 ) {
 	return function (filepath, ...args) {
 		const filename = getLockfileName(filepath);

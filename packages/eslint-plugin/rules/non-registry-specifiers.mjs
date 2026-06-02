@@ -28,7 +28,7 @@ import { makeLockfileContentLoader, stripNodeModulesPrefix, getContextFilename }
 
 const { values } = Object;
 
-/** @import { AST, Rule } from 'eslint' */
+/** @import { Rule } from 'eslint' */
 /** @import { Lockfile } from 'lockfile-tools/lib/package-managers.d.mts' */
 /** @import { RegistryURL } from 'lockfile-tools/lib/types.d.ts' */
 
@@ -324,7 +324,6 @@ export default {
 							return;
 						}
 
-						/** @type {AST.SourceLocation | undefined} */
 						const loc = line ? { start: { line, column: 0 }, end: { line, column: 0 } } : undefined;
 
 						// Check if this dependency is in the ignore list; entry is inferred from ignore array

@@ -421,7 +421,6 @@ export default {
 					if (!lockfileExists) {
 						const virtualPackages = await buildVirtualLockfile(dir);
 
-						/** @type {PackageRegistry[]} */
 						const packages = virtualPackages
 							.filter((pkg) => pkg.resolved)
 							.map((pkg) => {

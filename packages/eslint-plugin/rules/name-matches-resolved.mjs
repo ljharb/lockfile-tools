@@ -31,7 +31,7 @@ import { makeLockfileContentLoader, getContextFilename } from '../utils.mjs';
 
 const { values } = Object;
 
-/** @import { AST, Rule } from 'eslint' */
+/** @import { Rule } from 'eslint' */
 
 /** @typedef {{ name: string, resolved: string | null, line: number }} EntryInfo */
 
@@ -219,7 +219,6 @@ export default {
 						if (!urlName || !name || urlName === name) {
 							return;
 						}
-						/** @type {AST.SourceLocation} */
 						const loc = { start: { line, column: 0 }, end: { line, column: 0 } };
 						context.report({
 							node,
